@@ -1,0 +1,22 @@
+# Build outputs
+bin/
+obj/
+
+# IDE and editor files
+.vs/
+.vscode/*
+!.vscode/settings.json
+*.user
+*.suo
+*.cache
+
+# NuGet
+packages/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*~

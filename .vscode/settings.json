@@ -1,0 +1,5 @@
+{
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.enableEditorConfigSupport": true,
+    "dotnet.defaultSolution": "NinjaTraderIndicators.csproj"
+}

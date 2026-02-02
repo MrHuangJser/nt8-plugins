@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\</OutputPath>
+    <!-- 禁用构建，仅用于IDE智能感知 -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <!-- NinjaTrader 8 安装路径 - 请根据你的实际安装位置修改 -->
+  <PropertyGroup>
+    <NinjaTraderPath>C:\Program Files\NinjaTrader 8\bin</NinjaTraderPath>
+  </PropertyGroup>
+
+  <!-- 包含所有 .cs 文件 -->
+  <ItemGroup>
+    <Compile Include="**\*.cs" />
+  </ItemGroup>
+
+  <!-- NinjaTrader 核心引用 -->
+  <ItemGroup>
+    <Reference Include="NinjaTrader.Core">
+      <HintPath>$(NinjaTraderPath)\NinjaTrader.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="NinjaTrader.Gui">
+      <HintPath>$(NinjaTraderPath)\NinjaTrader.Gui.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="NinjaTrader.Client">
+      <HintPath>$(NinjaTraderPath)\NinjaTrader.Client.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="NinjaTrader.Custom">
+      <HintPath>$(NinjaTraderPath)\NinjaTrader.Custom.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="NinjaTrader.Cbi">
+      <HintPath>$(NinjaTraderPath)\NinjaTrader.Cbi.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- WPF 相关引用 -->
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+
+</Project>
