@@ -20,35 +20,27 @@ using NinjaTrader.NinjaScript;
 namespace NinjaTrader.NinjaScript.DrawingTools
 {
     /// <summary>
-    /// Mother Bar Line Drawing Tool - TradingView Style Fibonacci Extension
-    /// 母线绘图工具 - TradingView风格斐波那契扩展
+    /// Rush Magnet Drawing Tool - 急赴磁体划线工具
+    /// Displays horizontal lines at 0%, 12.5%, 25%, and 100% levels
     /// </summary>
-    public class MotherBarLine : DrawingTool
+    public class RushMagnet : DrawingTool
     {
         #region Variables
         private const int cursorSensitivity = 15;
         private ChartAnchor editingAnchor;
 
-        // Fibonacci levels configuration
-        private List<FibLevel> fibLevels;
+        // Level configuration
+        private List<MagnetLevel> magnetLevels;
         #endregion
 
-        #region FibLevel Class
-        private class FibLevel
+        #region MagnetLevel Class
+        private class MagnetLevel
         {
             public double Level { get; set; }
-            public Brush Color { get; set; }
-            public DashStyle DashStyle { get; set; }
-            public double Thickness { get; set; }
-            public bool IsExtension { get; set; }
 
-            public FibLevel(double level, Brush color, DashStyle dashStyle = null, double thickness = 1, bool isExtension = false)
+            public MagnetLevel(double level)
             {
                 Level = level;
-                Color = color;
-                DashStyle = dashStyle ?? DashStyles.Dash;
-                Thickness = thickness;
-                IsExtension = isExtension;
             }
         }
         #endregion
@@ -59,28 +51,37 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         [Display(Order = 2)]
         public ChartAnchor EndAnchor { get; set; }
 
-        [Display(Name = "Label Position", Description = "Display labels on left or right side", Order = 3, GroupName = "Parameters")]
-        public LabelPositionType LabelPosition { get; set; }
+        [Display(Name = "Line Color", Description = "Color of the level lines", Order = 3, GroupName = "Parameters")]
+        public Brush LineColor { get; set; }
+
+        [Browsable(false)]
+        public string LineColorSerialize
+        {
+            get { return Serialize.BrushToString(LineColor); }
+            set { LineColor = Serialize.StringToBrush(value); }
+        }
 
         [Display(Name = "Line Width", Description = "Width of the level lines", Order = 4, GroupName = "Parameters")]
         [Range(1, 10)]
         public int LineWidth { get; set; }
 
-        [Display(Name = "Line Style", Description = "Style of the level lines", Order = 5, GroupName = "Parameters")]
-        public LineStyleType LineStyle { get; set; }
+        [Display(Name = "Anchor Color", Description = "Color of the anchor points", Order = 5, GroupName = "Parameters")]
+        public Brush AnchorColor { get; set; }
+
+        [Browsable(false)]
+        public string AnchorColorSerialize
+        {
+            get { return Serialize.BrushToString(AnchorColor); }
+            set { AnchorColor = Serialize.StringToBrush(value); }
+        }
+
+        [Display(Name = "Label Position", Description = "Display labels on left or right side", Order = 6, GroupName = "Parameters")]
+        public LabelPositionType LabelPosition { get; set; }
 
         public enum LabelPositionType
         {
             Left,
             Right
-        }
-
-        public enum LineStyleType
-        {
-            Solid,
-            Dash,
-            Dot,
-            DashDot
         }
 
         public override IEnumerable<ChartAnchor> Anchors
@@ -90,51 +91,17 @@ namespace NinjaTrader.NinjaScript.DrawingTools
 
         public override object Icon
         {
-            get
-            {
-                return null;
-            }
+            get { return null; }
         }
 
-        private void InitializeFibLevels()
+        private void InitializeMagnetLevels()
         {
-            // Colors matching TradingView style
-            Brush extensionBlue = Brushes.DodgerBlue;
-            Brush innerOrange = Brushes.Orange;
-            Brush innerYellow = Brushes.Gold;
-            Brush negativeBlue = Brushes.DodgerBlue;
-            Brush negativeCyan = Brushes.Cyan;
-
-            fibLevels = new List<FibLevel>
+            magnetLevels = new List<MagnetLevel>
             {
-                // Positive extensions (above 100%)
-                new FibLevel(3.0000, extensionBlue, DashStyles.Dash, 1, true),      // 300.00%
-                new FibLevel(2.6180, extensionBlue, DashStyles.Dash, 1, true),      // 261.80%
-                new FibLevel(2.2300, extensionBlue, DashStyles.Dash, 1, true),      // 223.00%
-                new FibLevel(2.0000, extensionBlue, DashStyles.Dash, 1, true),      // 200.00%
-                new FibLevel(1.6180, extensionBlue, DashStyles.Dash, 1, true),      // 161.80%
-
-                // Upper retracement levels
-                new FibLevel(1.2300, extensionBlue, DashStyles.Dash, 1, true),      // 123.00%
-                new FibLevel(1.1100, innerYellow, DashStyles.Dash, 1, false),       // 111.00%
-                new FibLevel(1.0000, innerOrange, DashStyles.Dash, 1.5, false),     // 100.00%
-                new FibLevel(0.8900, innerYellow, DashStyles.Dash, 1, false),       // 89.00%
-                new FibLevel(0.7900, innerOrange, DashStyles.Dash, 1, false),       // 79.00%
-                new FibLevel(0.6600, innerOrange, DashStyles.Dash, 1, false),       // 66.00%
-                new FibLevel(0.5000, innerOrange, DashStyles.Dash, 1.5, false),     // 50.00%
-                new FibLevel(0.3300, innerOrange, DashStyles.Dash, 1, false),       // 33.00%
-                new FibLevel(0.2100, innerOrange, DashStyles.Dash, 1, false),       // 21.00%
-                new FibLevel(0.1100, innerYellow, DashStyles.Dash, 1, false),       // 11.00%
-                new FibLevel(0.0000, innerOrange, DashStyles.Dash, 1.5, false),     // 0.00%
-
-                // Negative extensions
-                new FibLevel(-0.1100, innerYellow, DashStyles.Dash, 1, true),       // -11.00%
-                new FibLevel(-0.2300, extensionBlue, DashStyles.Dash, 1, true),     // -23.00%
-                new FibLevel(-0.6180, extensionBlue, DashStyles.Dash, 1, true),     // -61.80%
-                new FibLevel(-1.0000, extensionBlue, DashStyles.Dash, 1, true),     // -100.00%
-                new FibLevel(-1.2300, extensionBlue, DashStyles.Dash, 1, true),     // -123.00%
-                new FibLevel(-1.6180, extensionBlue, DashStyles.Dash, 1, true),     // -161.80%
-                new FibLevel(-2.0000, negativeCyan, DashStyles.Dash, 1, true),      // -200.00%
+                new MagnetLevel(0.0000),    // 0.00%
+                new MagnetLevel(0.1250),    // 12.50%
+                new MagnetLevel(0.2500),    // 25.00%
+                new MagnetLevel(1.0000),    // 100.00%
             };
         }
 
@@ -144,21 +111,22 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         {
             if (State == State.SetDefaults)
             {
-                Description = @"Mother Bar Line - Extended Fibonacci Tool (TradingView Style)";
-                Name = "MotherBarLine";
+                Description = @"Rush Magnet - 急赴磁体划线工具";
+                Name = "RushMagnet";
                 DrawingState = DrawingState.Building;
                 StartAnchor = new ChartAnchor { IsEditing = true, DrawingTool = this };
                 EndAnchor = new ChartAnchor { IsEditing = true, DrawingTool = this };
                 LabelPosition = LabelPositionType.Right;
+                LineColor = Brushes.Red;
                 LineWidth = 1;
-                LineStyle = LineStyleType.Dash;
+                AnchorColor = Brushes.DodgerBlue;
 
-                InitializeFibLevels();
+                InitializeMagnetLevels();
             }
             else if (State == State.Configure)
             {
-                if (fibLevels == null)
-                    InitializeFibLevels();
+                if (magnetLevels == null)
+                    InitializeMagnetLevels();
             }
             else if (State == State.Terminated)
             {
@@ -224,7 +192,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             double endPrice = EndAnchor.Price;
             double range = startPrice - endPrice;
 
-            foreach (var level in fibLevels)
+            foreach (var level in magnetLevels)
             {
                 double price = endPrice + range * level.Level;
                 MinValue = Math.Min(MinValue, price);
@@ -306,8 +274,8 @@ namespace NinjaTrader.NinjaScript.DrawingTools
 
         public override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
-            if (fibLevels == null)
-                InitializeFibLevels();
+            if (magnetLevels == null)
+                InitializeMagnetLevels();
 
             RenderTarget.AntialiasMode = SharpDX.Direct2D1.AntialiasMode.PerPrimitive;
             ChartPanel chartPanel = chartControl.ChartPanels[chartScale.PanelIndex];
@@ -319,51 +287,26 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             double endPrice = EndAnchor.Price;
             double range = startPrice - endPrice;
 
-            // Use anchor X positions for line segment (not full width)
+            // Use anchor X positions for line segment
             float minX = (float)Math.Min(startPoint.X, endPoint.X);
             float maxX = (float)Math.Max(startPoint.X, endPoint.X);
 
-            // Draw each Fibonacci level
-            foreach (var level in fibLevels)
+            // Create brushes
+            SharpDX.Direct2D1.Brush lineBrush = LineColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush anchorBrush = AnchorColor.ToDxBrush(RenderTarget);
+
+            // Draw each level
+            foreach (var level in magnetLevels)
             {
                 double price = endPrice + range * level.Level;
                 float y = chartScale.GetYByValue(price);
 
-                // Create pen for this level
-                SharpDX.Direct2D1.Brush levelBrush = level.Color.ToDxBrush(RenderTarget);
-
-                // Convert LineStyle enum to SharpDX DashStyle
-                SharpDX.Direct2D1.DashStyle dxDashStyle;
-                switch (LineStyle)
-                {
-                    case LineStyleType.Solid:
-                        dxDashStyle = SharpDX.Direct2D1.DashStyle.Solid;
-                        break;
-                    case LineStyleType.Dot:
-                        dxDashStyle = SharpDX.Direct2D1.DashStyle.Dot;
-                        break;
-                    case LineStyleType.DashDot:
-                        dxDashStyle = SharpDX.Direct2D1.DashStyle.DashDot;
-                        break;
-                    default:
-                        dxDashStyle = SharpDX.Direct2D1.DashStyle.Dash;
-                        break;
-                }
-
-                SharpDX.Direct2D1.StrokeStyle strokeStyle = new SharpDX.Direct2D1.StrokeStyle(
-                    Core.Globals.D2DFactory,
-                    new SharpDX.Direct2D1.StrokeStyleProperties
-                    {
-                        DashStyle = dxDashStyle
-                    });
-
-                // Draw the horizontal line segment between anchors
+                // Draw the horizontal line (solid line)
                 RenderTarget.DrawLine(
                     new SharpDX.Vector2(minX, y),
                     new SharpDX.Vector2(maxX, y),
-                    levelBrush,
-                    (float)LineWidth,
-                    strokeStyle);
+                    lineBrush,
+                    (float)LineWidth);
 
                 // Draw the level text
                 string levelText = (level.Level * 100).ToString("F2") + "%";
@@ -384,47 +327,23 @@ namespace NinjaTrader.NinjaScript.DrawingTools
 
                 float textX;
                 if (LabelPosition == LabelPositionType.Right)
-                    textX = maxX + 5;
+                    textX = maxX + 10;
                 else
-                    textX = minX - textLayout.Metrics.Width - 5;
+                    textX = minX - textLayout.Metrics.Width - 10;
 
                 float textY = y - textLayout.Metrics.Height / 2;
 
                 RenderTarget.DrawTextLayout(
                     new SharpDX.Vector2(textX, textY),
                     textLayout,
-                    levelBrush);
+                    lineBrush);
 
                 textLayout.Dispose();
                 textFormat.Dispose();
-                strokeStyle.Dispose();
-                levelBrush.Dispose();
             }
 
-            // Draw anchor points
-            if (IsSelected)
-            {
-                SharpDX.Direct2D1.Brush anchorBrush = Brushes.DodgerBlue.ToDxBrush(RenderTarget);
-                float anchorRadius = 6;
-
-                // Start anchor (hollow circle)
-                RenderTarget.DrawEllipse(
-                    new SharpDX.Direct2D1.Ellipse(
-                        new SharpDX.Vector2((float)startPoint.X, (float)startPoint.Y),
-                        anchorRadius, anchorRadius),
-                    anchorBrush,
-                    2);
-
-                // End anchor (hollow circle)
-                RenderTarget.DrawEllipse(
-                    new SharpDX.Direct2D1.Ellipse(
-                        new SharpDX.Vector2((float)endPoint.X, (float)endPoint.Y),
-                        anchorRadius, anchorRadius),
-                    anchorBrush,
-                    2);
-
-                anchorBrush.Dispose();
-            }
+            lineBrush.Dispose();
+            anchorBrush.Dispose();
         }
     }
 }
