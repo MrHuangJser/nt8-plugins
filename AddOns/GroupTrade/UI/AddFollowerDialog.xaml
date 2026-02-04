@@ -1,0 +1,106 @@
+<Window x:Class="NinjaTrader.NinjaScript.AddOns.GroupTrade.UI.AddFollowerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="添加从账户"
+        Height="400" Width="450"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#1E1E1E">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#DCDCDC"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#3F3F46"/>
+            <Setter Property="Foreground" Value="#DCDCDC"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="Padding" Value="5"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#3F3F46"/>
+            <Setter Property="Foreground" Value="#DCDCDC"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="Padding" Value="5"/>
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#007ACC"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#3F3F46"/>
+            <Setter Property="Foreground" Value="#DCDCDC"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="100"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 账户选择 -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="账户:"/>
+        <ComboBox x:Name="AccountCombo" Grid.Row="0" Grid.Column="1" Margin="0,5"/>
+
+        <!-- 比例模式 -->
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="比例模式:"/>
+        <ComboBox x:Name="RatioModeCombo" Grid.Row="1" Grid.Column="1" Margin="0,5"
+                  SelectionChanged="RatioModeCombo_SelectionChanged">
+            <ComboBoxItem Content="ExactQuantity" IsSelected="True"/>
+            <ComboBoxItem Content="EqualQuantity"/>
+            <ComboBoxItem Content="Ratio"/>
+            <ComboBoxItem Content="NetLiquidation"/>
+            <ComboBoxItem Content="AvailableMoney"/>
+            <ComboBoxItem Content="PercentageChange"/>
+            <ComboBoxItem Content="PreAllocation"/>
+        </ComboBox>
+
+        <!-- 比例值 -->
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="比例值:"/>
+        <TextBox x:Name="RatioValueText" Grid.Row="2" Grid.Column="1" Text="1.0" Margin="0,5"/>
+
+        <!-- 预分配手数 -->
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="预分配手数:"/>
+        <TextBox x:Name="PreAllocText" Grid.Row="3" Grid.Column="1" Text="1" Margin="0,5"/>
+
+        <!-- 最小/最大手数 -->
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="最小手数:"/>
+        <TextBox x:Name="MinQtyText" Grid.Row="4" Grid.Column="1" Text="1" Margin="0,5"/>
+
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="最大手数:"/>
+        <TextBox x:Name="MaxQtyText" Grid.Row="5" Grid.Column="1" Text="0" Margin="0,5"/>
+
+        <!-- 跨合约目标 -->
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="跨合约:"/>
+        <TextBox x:Name="CrossOrderText" Grid.Row="6" Grid.Column="1" Margin="0,5"
+                 ToolTip="留空表示不跨合约，输入如 MNQ 表示转换为 Micro 合约"/>
+
+        <!-- 按钮 -->
+        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+                    Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="确定" Style="{StaticResource PrimaryButton}"
+                    Click="OK_Click" Margin="0,0,10,0"/>
+            <Button Content="取消" Style="{StaticResource SecondaryButton}"
+                    Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
