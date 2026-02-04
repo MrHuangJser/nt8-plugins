@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
+using NinjaTrader.NinjaScript.AddOns.GroupTrade.Core;
+using NinjaTrader.NinjaScript.AddOns.GroupTrade.Services;
 
 namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
 {
@@ -83,6 +85,11 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         public bool EnableFollowerGuard { get; set; } = false;
 
         /// <summary>
+        /// Follower Guard 详细配置
+        /// </summary>
+        public GuardConfiguration GuardConfiguration { get; set; } = new GuardConfiguration();
+
+        /// <summary>
         /// 连续亏损保护阈值
         /// </summary>
         public int GuardConsecutiveLossCount { get; set; } = 3;
@@ -96,6 +103,20 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         /// 权益跌幅保护阈值 (%)
         /// </summary>
         public double GuardEquityDrawdownPercent { get; set; } = 5.0;
+
+        #endregion
+
+        #region 邮件通知
+
+        /// <summary>
+        /// 启用邮件通知
+        /// </summary>
+        public bool EnableEmailNotification { get; set; } = false;
+
+        /// <summary>
+        /// 邮件配置
+        /// </summary>
+        public EmailConfiguration EmailConfiguration { get; set; } = new EmailConfiguration();
 
         #endregion
 
@@ -165,6 +186,9 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
                 SyncOCO = true,
                 StealthMode = false,
                 EnableFollowerGuard = false,
+                GuardConfiguration = GuardConfiguration.CreateDefault(),
+                EnableEmailNotification = false,
+                EmailConfiguration = new EmailConfiguration(),
                 LastModified = DateTime.Now
             };
         }
