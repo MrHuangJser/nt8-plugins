@@ -220,17 +220,32 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             {
                 var order = e.Order;
 
+                // 调试日志：记录所有订单状态变化
+                Log(GtLogLevel.Info, "DEBUG", $"OrderUpdate: Id={order.OrderId}, Name={order.Name}, State={e.OrderState}, Limit={order.LimitPrice}, Stop={order.StopPrice}");
+
                 // 防循环：检查是否为复制订单
                 if (IsCopiedOrder(order))
+                {
+                    Log(GtLogLevel.Info, "DEBUG", $"跳过复制订单: {order.OrderId}");
                     return;
+                }
 
                 // 防重复：检查是否已处理过此状态
-                string stateKey = $"{order.OrderId}_{e.OrderState}";
-                lock (_syncLock)
+                // 注意：ChangeSubmitted 状态不做重复检查，因为同一订单可能被多次修改
+                bool shouldCheckDuplicate = e.OrderState != OrderState.ChangeSubmitted;
+
+                if (shouldCheckDuplicate)
                 {
-                    if (_processedOrderStates.Contains(stateKey))
-                        return;
-                    _processedOrderStates.Add(stateKey);
+                    lock (_syncLock)
+                    {
+                        string simpleKey = $"{order.OrderId}_{e.OrderState}";
+                        if (_processedOrderStates.Contains(simpleKey))
+                        {
+                            Log(GtLogLevel.Info, "DEBUG", $"跳过重复状态: {simpleKey}");
+                            return;
+                        }
+                        _processedOrderStates.Add(simpleKey);
+                    }
                 }
 
                 // 根据订单状态处理
@@ -401,31 +416,87 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// </summary>
         private void HandleOrderModified(Order leaderOrder)
         {
+            Log(GtLogLevel.Info, "DEBUG", $"HandleOrderModified 被调用: OrderId={leaderOrder.OrderId}, Name={leaderOrder.Name}");
+
             if (!_config.SyncOrderModify)
+            {
+                Log(GtLogLevel.Info, "DEBUG", "SyncOrderModify 未启用，跳过");
                 return;
+            }
 
+            // 尝试通过 OrderId 查找映射
             var mappings = _orderTracker.GetFollowerMappings(leaderOrder.OrderId);
-            if (mappings.Count == 0)
-                return;
 
-            Log(GtLogLevel.Info, "SYNC", $"主订单改价 → 同步修改 {mappings.Count} 个从订单");
+            // 如果找不到，输出当前所有映射用于调试
+            if (mappings.Count == 0)
+            {
+                Log(GtLogLevel.Warning, "DEBUG", $"找不到 OrderId={leaderOrder.OrderId} 的映射，检查所有活跃映射...");
+                var allMappings = _orderTracker.GetAllActiveMappings();
+                foreach (var m in allMappings)
+                {
+                    Log(GtLogLevel.Info, "DEBUG", $"  现有映射: MasterId={m.MasterOrderId}, MasterName={m.MasterOrderName}, FollowerId={m.FollowerOrderId}");
+                }
+                return;
+            }
+
+            Log(GtLogLevel.Info, "SYNC", $"主订单改价 → 同步修改 {mappings.Count} 个从订单 (Limit={leaderOrder.LimitPrice}, Stop={leaderOrder.StopPrice})");
 
             foreach (var mapping in mappings)
             {
-                if (mapping.FollowerOrder != null && !Order.IsTerminalState(mapping.LastKnownState))
+                if (mapping.FollowerAccount == null)
                 {
-                    try
-                    {
-                        // 更新价格
-                        mapping.FollowerOrder.LimitPriceChanged = leaderOrder.LimitPrice;
-                        mapping.FollowerOrder.StopPriceChanged = leaderOrder.StopPrice;
+                    Log(GtLogLevel.Warning, "DEBUG", "FollowerAccount 为 null");
+                    continue;
+                }
 
-                        mapping.FollowerAccount.Change(new[] { mapping.FollowerOrder });
-                    }
-                    catch (Exception ex)
+                try
+                {
+                    // 刷新订单引用：从账户的 Orders 集合获取最新订单对象
+                    // 注意：订单提交后 OrderId 会变化，但 Name 是稳定的（格式为 [GT]{主订单ID}）
+                    Order freshOrder = null;
+                    string expectedName = $"{COPY_TAG}{leaderOrder.OrderId}";
+                    Log(GtLogLevel.Info, "DEBUG", $"在 {mapping.FollowerAccountName} 中查找订单 Name={expectedName}...");
+
+                    foreach (var order in mapping.FollowerAccount.Orders)
                     {
-                        Log(GtLogLevel.Error, "SYNC", $"修改从订单失败: {ex.Message}");
+                        Log(GtLogLevel.Info, "DEBUG", $"  账户订单: Id={order.OrderId}, Name={order.Name}, State={order.OrderState}");
+                        // 通过 Name 匹配（Name 包含 [GT] 前缀和主订单ID，是稳定的标识符）
+                        if (order.Name == expectedName)
+                        {
+                            freshOrder = order;
+                            break;
+                        }
                     }
+
+                    if (freshOrder == null)
+                    {
+                        Log(GtLogLevel.Warning, "SYNC", $"找不到从订单: Name={expectedName}");
+                        continue;
+                    }
+
+                    // 检查订单是否仍可修改
+                    if (Order.IsTerminalState(freshOrder.OrderState))
+                    {
+                        Log(GtLogLevel.Info, "SYNC", $"从订单已终态，跳过修改: {freshOrder.OrderState}");
+                        continue;
+                    }
+
+                    // 更新价格
+                    freshOrder.LimitPriceChanged = leaderOrder.LimitPrice;
+                    freshOrder.StopPriceChanged = leaderOrder.StopPrice;
+
+                    Log(GtLogLevel.Info, "DEBUG", $"调用 Change(): LimitPriceChanged={freshOrder.LimitPriceChanged}, StopPriceChanged={freshOrder.StopPriceChanged}");
+                    mapping.FollowerAccount.Change(new[] { freshOrder });
+
+                    // 更新映射中的订单引用
+                    mapping.FollowerOrder = freshOrder;
+                    mapping.LastKnownState = freshOrder.OrderState;
+
+                    Log(GtLogLevel.Info, "SYNC", $"{mapping.FollowerAccountName}: 已同步改价");
+                }
+                catch (Exception ex)
+                {
+                    Log(GtLogLevel.Error, "SYNC", $"修改从订单失败: {ex.Message}\n{ex.StackTrace}");
                 }
             }
         }
