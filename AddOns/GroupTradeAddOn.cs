@@ -65,11 +65,14 @@ namespace NinjaTrader.NinjaScript.AddOns
                 if (_existingMenuItem == null)
                     return;
 
-                // 检查是否已存在 Group Trade 菜单项（防止重复）
-                foreach (var item in _existingMenuItem.Items)
+                // 强力清理：移除所有名为 "Group Trade" 的现有菜单项（防止僵尸菜单）
+                var itemsToRemove = _existingMenuItem.Items.OfType<NTMenuItem>()
+                    .Where(item => item.Header?.ToString() == "Group Trade")
+                    .ToList();
+
+                foreach (var item in itemsToRemove)
                 {
-                    if (item is NTMenuItem existingItem && existingItem.Header?.ToString() == "Group Trade")
-                        return;
+                    _existingMenuItem.Items.Remove(item);
                 }
 
                 // 创建 Group Trade 菜单项
