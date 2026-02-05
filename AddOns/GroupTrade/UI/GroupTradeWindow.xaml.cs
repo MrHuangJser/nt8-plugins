@@ -575,7 +575,15 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.UI
             dialog.AccountCombo.SelectedIndex = 0;
             dialog.AccountCombo.IsEnabled = false;
 
-            dialog.RatioModeCombo.SelectedItem = selected.RatioMode.ToString();
+            // 选中对应的比例模式
+            foreach (ComboBoxItem item in dialog.RatioModeCombo.Items)
+            {
+                if (item.Tag is RatioMode mode && mode == selected.RatioMode)
+                {
+                    dialog.RatioModeCombo.SelectedItem = item;
+                    break;
+                }
+            }
             dialog.RatioValueText.Text = selected.FixedRatio.ToString();
             dialog.PreAllocText.Text = selected.PreAllocatedQuantity.ToString();
             dialog.MinQtyText.Text = selected.MinQuantity.ToString();

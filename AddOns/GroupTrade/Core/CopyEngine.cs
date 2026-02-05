@@ -439,7 +439,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 return;
             }
 
-            Log(GtLogLevel.Info, "SYNC", $"主订单改价 → 同步修改 {mappings.Count} 个从订单 (Limit={leaderOrder.LimitPrice}, Stop={leaderOrder.StopPrice})");
+            Log(GtLogLevel.Info, "SYNC", $"主订单变更 → 同步修改 {mappings.Count} 个从订单 (Qty={leaderOrder.Quantity}, Limit={leaderOrder.LimitPrice}, Stop={leaderOrder.StopPrice})");
 
             foreach (var mapping in mappings)
             {
@@ -485,14 +485,30 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     freshOrder.LimitPriceChanged = leaderOrder.LimitPrice;
                     freshOrder.StopPriceChanged = leaderOrder.StopPrice;
 
-                    Log(GtLogLevel.Info, "DEBUG", $"调用 Change(): LimitPriceChanged={freshOrder.LimitPriceChanged}, StopPriceChanged={freshOrder.StopPriceChanged}");
+                    // 更新数量：根据从账户配置重新计算
+                    var followerConfig = _config.FollowerAccounts.FirstOrDefault(f => f.AccountName == mapping.FollowerAccountName);
+                    if (followerConfig != null)
+                    {
+                        var (newQuantity, _) = _quantityCalculator.Calculate(
+                            leaderOrder.Quantity,
+                            followerConfig,
+                            _leaderAccount,
+                            mapping.FollowerAccount,
+                            _config.EnabledFollowerCount
+                        );
+                        freshOrder.QuantityChanged = newQuantity;
+                        Log(GtLogLevel.Info, "DEBUG", $"计算新数量: 主订单={leaderOrder.Quantity}, 从订单={newQuantity}");
+                    }
+
+                    Log(GtLogLevel.Info, "DEBUG", $"调用 Change(): Qty={freshOrder.QuantityChanged}, Limit={freshOrder.LimitPriceChanged}, Stop={freshOrder.StopPriceChanged}");
                     mapping.FollowerAccount.Change(new[] { freshOrder });
 
                     // 更新映射中的订单引用
                     mapping.FollowerOrder = freshOrder;
                     mapping.LastKnownState = freshOrder.OrderState;
+                    mapping.FollowerQuantity = freshOrder.QuantityChanged;
 
-                    Log(GtLogLevel.Info, "SYNC", $"{mapping.FollowerAccountName}: 已同步改价");
+                    Log(GtLogLevel.Info, "SYNC", $"{mapping.FollowerAccountName}: 已同步订单变更");
                 }
                 catch (Exception ex)
                 {

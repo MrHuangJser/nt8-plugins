@@ -54,13 +54,13 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.UI
 
             // Row 1: Ratio mode
             RatioModeCombo = new ComboBox { Margin = new Thickness(0, 5, 0, 5) };
-            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "ExactQuantity", IsSelected = true });
-            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "EqualQuantity" });
-            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "Ratio" });
-            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "NetLiquidation" });
-            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "AvailableMoney" });
-            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "PercentageChange" });
-            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "PreAllocation" });
+            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "精确跟随 (1:1)", Tag = RatioMode.ExactQuantity, IsSelected = true });
+            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "均分数量", Tag = RatioMode.EqualQuantity });
+            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "固定比例", Tag = RatioMode.Ratio });
+            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "净值比例", Tag = RatioMode.NetLiquidation });
+            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "可用资金比例", Tag = RatioMode.AvailableMoney });
+            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "百分比变化", Tag = RatioMode.PercentageChange });
+            RatioModeCombo.Items.Add(new ComboBoxItem { Content = "预分配手数", Tag = RatioMode.PreAllocation });
             RatioModeCombo.SelectionChanged += RatioModeCombo_SelectionChanged;
             AddRow(mainGrid, 1, "比例模式:", RatioModeCombo);
 
@@ -131,8 +131,8 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.UI
         {
             get
             {
-                var selected = (RatioModeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
-                if (Enum.TryParse<RatioMode>(selected, out var mode))
+                var selectedItem = RatioModeCombo.SelectedItem as ComboBoxItem;
+                if (selectedItem?.Tag is RatioMode mode)
                     return mode;
                 return RatioMode.ExactQuantity;
             }
@@ -189,17 +189,19 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.UI
             if (RatioValueText == null || PreAllocText == null)
                 return;
 
-            var selected = (RatioModeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            var selectedItem = RatioModeCombo.SelectedItem as ComboBoxItem;
+            if (selectedItem?.Tag is not RatioMode mode)
+                return;
 
             // 根据模式启用/禁用相关输入框
-            switch (selected)
+            switch (mode)
             {
-                case "Ratio":
-                case "PercentageChange":
+                case RatioMode.Ratio:
+                case RatioMode.PercentageChange:
                     RatioValueText.IsEnabled = true;
                     PreAllocText.IsEnabled = false;
                     break;
-                case "PreAllocation":
+                case RatioMode.PreAllocation:
                     RatioValueText.IsEnabled = false;
                     PreAllocText.IsEnabled = true;
                     break;
