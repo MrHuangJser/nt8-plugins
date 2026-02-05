@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using NinjaTrader.Cbi;
 using NinjaTrader.NinjaScript.AddOns.GroupTrade.Models;
+// Alias to resolve LogLevel ambiguity with NinjaTrader.Cbi.LogLevel
+using GtLogLevel = NinjaTrader.NinjaScript.AddOns.GroupTrade.Models.LogLevel;
 
 namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
 {
@@ -30,7 +32,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// <summary>
         /// 日志事件
         /// </summary>
-        public event Action<string, LogLevel> OnLog;
+        public event Action<string, GtLogLevel> OnLog;
 
         #endregion
 
@@ -59,7 +61,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         {
             _config = config ?? GuardConfiguration.CreateDefault();
             _isEnabled = true;
-            Log($"Follower Guard 已启用", LogLevel.Info);
+            Log($"Follower Guard 已启用", GtLogLevel.Info);
         }
 
         /// <summary>
@@ -68,7 +70,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         public void Disable()
         {
             _isEnabled = false;
-            Log($"Follower Guard 已禁用", LogLevel.Info);
+            Log($"Follower Guard 已禁用", GtLogLevel.Info);
         }
 
         /// <summary>
@@ -126,7 +128,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 {
                     state.ConsecutiveLosses++;
                     state.DailyLoss += Math.Abs(pnl);
-                    Log($"{accountName}: 亏损 ${Math.Abs(pnl):F2}, 连续亏损 {state.ConsecutiveLosses} 次", LogLevel.Warning);
+                    Log($"{accountName}: 亏损 ${Math.Abs(pnl):F2}, 连续亏损 {state.ConsecutiveLosses} 次", GtLogLevel.Warning);
                 }
                 else
                 {
@@ -152,7 +154,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     return;
 
                 state.ConsecutiveRejections++;
-                Log($"{accountName}: 订单被拒, 连续 {state.ConsecutiveRejections} 次", LogLevel.Warning);
+                Log($"{accountName}: 订单被拒, 连续 {state.ConsecutiveRejections} 次", GtLogLevel.Warning);
 
                 CheckGuardRules(state);
             }
@@ -270,7 +272,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     state.ConsecutiveLosses = 0;
                     state.ConsecutiveRejections = 0;
                     state.DailyLoss = 0;
-                    Log($"{accountName}: 保护状态已重置", LogLevel.Info);
+                    Log($"{accountName}: 保护状态已重置", GtLogLevel.Info);
                 }
             }
         }
@@ -378,7 +380,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             state.ProtectionReason = reason;
             state.ProtectionTime = DateTime.Now;
 
-            Log($"[GUARD] {state.AccountName}: 触发保护 - {reason} - {details}", LogLevel.Warning);
+            Log($"[GUARD] {state.AccountName}: 触发保护 - {reason} - {details}", GtLogLevel.Warning);
 
             // 触发事件
             var args = new GuardTriggerEventArgs
@@ -411,12 +413,12 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
 
             try
             {
-                account.Flatten(new[] { account });
-                Log($"{account.Name}: 已执行平仓操作", LogLevel.Info);
+                account.Flatten(new Instrument[0]);
+                Log($"{account.Name}: 已执行平仓操作", GtLogLevel.Info);
             }
             catch (Exception ex)
             {
-                Log($"{account.Name}: 平仓失败 - {ex.Message}", LogLevel.Error);
+                Log($"{account.Name}: 平仓失败 - {ex.Message}", GtLogLevel.Error);
             }
         }
 
@@ -441,7 +443,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// <summary>
         /// 记录日志
         /// </summary>
-        private void Log(string message, LogLevel level)
+        private void Log(string message, GtLogLevel level)
         {
             OnLog?.Invoke(message, level);
             NinjaTrader.Code.Output.Process($"[GroupTrade] [Guard] {message}", PrintTo.OutputTab1);

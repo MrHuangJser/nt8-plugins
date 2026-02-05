@@ -40,25 +40,4 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         /// </summary>
         PreAllocation
     }
-
-    /// <summary>
-    /// 复制模式
-    /// </summary>
-    public enum CopyMode
-    {
-        /// <summary>
-        /// 复制所有订单类型
-        /// </summary>
-        AllOrders,
-
-        /// <summary>
-        /// 仅复制市价单成交（忽略限价/止损挂单）
-        /// </summary>
-        MarketOnly,
-
-        /// <summary>
-        /// 使用主账户的 ATM 策略管理从账户出场
-        /// </summary>
-        ATMCopy
-    }
 }

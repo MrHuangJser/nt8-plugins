@@ -89,10 +89,9 @@
         <TextBlock Grid.Row="5" Grid.Column="0" Text="最大手数:"/>
         <TextBox x:Name="MaxQtyText" Grid.Row="5" Grid.Column="1" Text="0" Margin="0,5"/>
 
-        <!-- 跨合约目标 -->
-        <TextBlock Grid.Row="6" Grid.Column="0" Text="跨合约:"/>
-        <TextBox x:Name="CrossOrderText" Grid.Row="6" Grid.Column="1" Margin="0,5"
-                 ToolTip="留空表示不跨合约，输入如 MNQ 表示转换为 Micro 合约"/>
+        <!-- 备注 -->
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="备注:"/>
+        <TextBox x:Name="NotesText" Grid.Row="6" Grid.Column="1" Margin="0,5"/>
 
         <!-- 按钮 -->
         <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"

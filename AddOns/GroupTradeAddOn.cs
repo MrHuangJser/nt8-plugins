@@ -50,16 +50,27 @@ namespace NinjaTrader.NinjaScript.AddOns
         protected override void OnWindowCreated(Window window)
         {
             // 只在 Control Center 窗口添加菜单
-            ControlCenter controlCenter = window as ControlCenter;
-            if (controlCenter == null)
+            // ControlCenter 类型不公开，使用类型名称检查
+            if (window.GetType().Name != "ControlCenter")
+                return;
+
+            // 防止重复添加
+            if (_menuItem != null)
                 return;
 
             try
             {
                 // 查找 "New" 菜单
-                _existingMenuItem = controlCenter.FindFirst("ControlCenterMenuItemNew") as NTMenuItem;
+                _existingMenuItem = window.FindFirst("ControlCenterMenuItemNew") as NTMenuItem;
                 if (_existingMenuItem == null)
                     return;
+
+                // 检查是否已存在 Group Trade 菜单项（防止重复）
+                foreach (var item in _existingMenuItem.Items)
+                {
+                    if (item is NTMenuItem existingItem && existingItem.Header?.ToString() == "Group Trade")
+                        return;
+                }
 
                 // 创建 Group Trade 菜单项
                 _menuItem = new NTMenuItem
@@ -131,10 +142,16 @@ namespace NinjaTrader.NinjaScript.AddOns
                 _copyEngine?.Stop();
                 _copyEngine = null;
 
-                // 清理菜单
+                // 从 UI 移除菜单项 (关键修复：防止 Reload NinjaScript 后残留僵尸菜单)
                 if (_menuItem != null)
                 {
                     _menuItem.Click -= OnMenuItemClick;
+
+                    if (_existingMenuItem != null && _existingMenuItem.Items.Contains(_menuItem))
+                    {
+                        _existingMenuItem.Items.Remove(_menuItem);
+                    }
+
                     _menuItem = null;
                 }
 

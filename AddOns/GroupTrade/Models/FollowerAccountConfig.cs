@@ -51,22 +51,6 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         public int MaxQuantity { get; set; } = 0;
 
         /// <summary>
-        /// 跨合约目标 Symbol（如 "MNQ" 表示 NQ → MNQ）
-        /// 为空表示不进行跨合约转换
-        /// </summary>
-        public string CrossOrderTarget { get; set; } = "";
-
-        /// <summary>
-        /// 是否为网络节点（非本地账户）
-        /// </summary>
-        public bool IsNetworkNode { get; set; } = false;
-
-        /// <summary>
-        /// 网络节点地址（IP:Port 格式）
-        /// </summary>
-        public string NetworkAddress { get; set; } = "";
-
-        /// <summary>
         /// 备注
         /// </summary>
         public string Notes { get; set; } = "";
@@ -81,7 +65,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         /// 获取显示名称
         /// </summary>
         [XmlIgnore]
-        public string DisplayName => IsNetworkNode ? $"[NET] {NetworkAddress}" : AccountName;
+        public string DisplayName => AccountName;
 
         /// <summary>
         /// 获取比例/手数的显示值

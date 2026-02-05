@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using NinjaTrader.Cbi;
 using NinjaTrader.NinjaScript.AddOns.GroupTrade.Models;
-using NinjaTrader.NinjaScript.AddOns.GroupTrade.Services;
+// Alias to resolve LogLevel ambiguity with NinjaTrader.Cbi.LogLevel
+using GtLogLevel = NinjaTrader.NinjaScript.AddOns.GroupTrade.Models.LogLevel;
 
 namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
 {
@@ -32,9 +33,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         private readonly List<Account> _followerAccounts = new List<Account>();
         private readonly OrderTracker _orderTracker;
         private readonly QuantityCalculator _quantityCalculator;
-        private readonly CrossOrderMapper _crossOrderMapper;
         private readonly FollowerGuard _followerGuard;
-        private readonly EmailNotifier _emailNotifier;
         private CopyConfiguration _config;
         private CopyStatus _status;
 
@@ -65,9 +64,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         {
             _orderTracker = new OrderTracker();
             _quantityCalculator = new QuantityCalculator();
-            _crossOrderMapper = new CrossOrderMapper();
             _followerGuard = new FollowerGuard();
-            _emailNotifier = new EmailNotifier();
             _status = new CopyStatus();
 
             // 订阅 FollowerGuard 事件
@@ -82,9 +79,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         public bool IsRunning => _isRunning;
         public CopyStatus Status => _status;
         public CopyConfiguration Configuration => _config;
-        public CrossOrderMapper CrossOrderMapper => _crossOrderMapper;
         public FollowerGuard FollowerGuard => _followerGuard;
-        public EmailNotifier EmailNotifier => _emailNotifier;
 
         #endregion
 
@@ -97,7 +92,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         {
             if (_isRunning)
             {
-                Log(LogLevel.Warning, "ENGINE", "复制引擎已在运行中");
+                Log(GtLogLevel.Warning, "ENGINE", "复制引擎已在运行中");
                 return false;
             }
 
@@ -106,13 +101,13 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             // 验证配置
             if (string.IsNullOrEmpty(config.LeaderAccountName))
             {
-                Log(LogLevel.Error, "ENGINE", "未配置主账户");
+                Log(GtLogLevel.Error, "ENGINE", "未配置主账户");
                 return false;
             }
 
             if (config.EnabledFollowerCount == 0)
             {
-                Log(LogLevel.Error, "ENGINE", "未配置启用的从账户");
+                Log(GtLogLevel.Error, "ENGINE", "未配置启用的从账户");
                 return false;
             }
 
@@ -120,29 +115,29 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             _leaderAccount = GetAccountByName(config.LeaderAccountName);
             if (_leaderAccount == null)
             {
-                Log(LogLevel.Error, "ENGINE", $"找不到主账户: {config.LeaderAccountName}");
+                Log(GtLogLevel.Error, "ENGINE", $"找不到主账户: {config.LeaderAccountName}");
                 return false;
             }
 
             // 获取从账户
             _followerAccounts.Clear();
-            foreach (var followerConfig in config.FollowerAccounts.Where(f => f.IsEnabled && !f.IsNetworkNode))
+            foreach (var followerConfig in config.FollowerAccounts.Where(f => f.IsEnabled))
             {
                 var account = GetAccountByName(followerConfig.AccountName);
                 if (account != null)
                 {
                     _followerAccounts.Add(account);
-                    Log(LogLevel.Info, "ENGINE", $"已添加从账户: {followerConfig.AccountName}");
+                    Log(GtLogLevel.Info, "ENGINE", $"已添加从账户: {followerConfig.AccountName}");
                 }
                 else
                 {
-                    Log(LogLevel.Warning, "ENGINE", $"找不到从账户: {followerConfig.AccountName}");
+                    Log(GtLogLevel.Warning, "ENGINE", $"找不到从账户: {followerConfig.AccountName}");
                 }
             }
 
             if (_followerAccounts.Count == 0)
             {
-                Log(LogLevel.Error, "ENGINE", "没有可用的从账户");
+                Log(GtLogLevel.Error, "ENGINE", "没有可用的从账户");
                 return false;
             }
 
@@ -172,7 +167,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 }
             }
 
-            Log(LogLevel.Info, "ENGINE", $"复制引擎已启动 - 主账户: {config.LeaderAccountName}, 从账户: {_followerAccounts.Count} 个");
+            Log(GtLogLevel.Info, "ENGINE", $"复制引擎已启动 - 主账户: {config.LeaderAccountName}, 从账户: {_followerAccounts.Count} 个");
             OnStatusChanged?.Invoke(_status);
 
             return true;
@@ -205,7 +200,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             _followerAccounts.Clear();
             _leaderAccount = null;
 
-            Log(LogLevel.Info, "ENGINE", "复制引擎已停止");
+            Log(GtLogLevel.Info, "ENGINE", "复制引擎已停止");
             OnStatusChanged?.Invoke(_status);
         }
 
@@ -263,13 +258,13 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                         break;
 
                     case OrderState.Rejected:
-                        Log(LogLevel.Warning, "LEADER", $"主账户订单被拒绝: {order.Name}");
+                        Log(GtLogLevel.Warning, "LEADER", $"主账户订单被拒绝: {order.Name}");
                         break;
                 }
             }
             catch (Exception ex)
             {
-                Log(LogLevel.Error, "ENGINE", $"处理订单事件异常: {ex.Message}");
+                Log(GtLogLevel.Error, "ENGINE", $"处理订单事件异常: {ex.Message}");
             }
         }
 
@@ -278,18 +273,11 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// </summary>
         private void HandleNewOrder(Order leaderOrder)
         {
-            // Market Only 模式检查
-            if (_config.CopyMode == CopyMode.MarketOnly && leaderOrder.OrderType != OrderType.Market)
-            {
-                Log(LogLevel.Debug, "SKIP", $"Market Only 模式，跳过非市价单: {leaderOrder.OrderType}");
-                return;
-            }
-
-            Log(LogLevel.Info, "COPY", $"检测到主账户新订单: {leaderOrder.OrderAction} {leaderOrder.Quantity} {leaderOrder.Instrument.FullName}");
+            Log(GtLogLevel.Info, "COPY", $"检测到主账户新订单: {leaderOrder.OrderAction} {leaderOrder.Quantity} {leaderOrder.Instrument.FullName}");
 
             int enabledCount = _config.EnabledFollowerCount;
 
-            foreach (var followerConfig in _config.FollowerAccounts.Where(f => f.IsEnabled && !f.IsNetworkNode))
+            foreach (var followerConfig in _config.FollowerAccounts.Where(f => f.IsEnabled))
             {
                 var followerAccount = _followerAccounts.FirstOrDefault(a => a.Name == followerConfig.AccountName);
                 if (followerAccount == null)
@@ -313,24 +301,8 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                         orderAction = ReverseOrderAction(orderAction);
                     }
 
-                    // 确定合约（支持跨合约）
+                    // 使用主账户相同的合约
                     Instrument instrument = leaderOrder.Instrument;
-                    bool isCrossOrder = false;
-                    if (!string.IsNullOrEmpty(followerConfig.CrossOrderTarget))
-                    {
-                        string sourceSymbol = leaderOrder.Instrument.MasterInstrument.Name;
-                        if (_crossOrderMapper.CanConvert(sourceSymbol, followerConfig.CrossOrderTarget))
-                        {
-                            var targetInstrument = _crossOrderMapper.GetTargetInstrument(leaderOrder.Instrument, followerConfig.CrossOrderTarget);
-                            if (targetInstrument != null)
-                            {
-                                instrument = targetInstrument;
-                                // 调整跨合约手数
-                                quantity = _crossOrderMapper.ConvertQuantity(quantity, sourceSymbol, followerConfig.CrossOrderTarget);
-                                isCrossOrder = true;
-                            }
-                        }
-                    }
 
                     // 确定订单名称
                     string orderName = _config.StealthMode ? STEALTH_TAG : $"{COPY_TAG}{leaderOrder.OrderId}";
@@ -347,7 +319,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                         leaderOrder.StopPrice,
                         "", // OCO
                         orderName,
-                        Core.Globals.MaxDate,
+                        NinjaTrader.Core.Globals.MaxDate,
                         null
                     );
 
@@ -367,9 +339,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                         MasterQuantity = leaderOrder.Quantity,
                         FollowerQuantity = quantity,
                         InstrumentName = instrument.FullName,
-                        OrderAction = orderAction,
-                        IsCrossOrder = isCrossOrder,
-                        CrossOrderTarget = followerConfig.CrossOrderTarget
+                        OrderAction = orderAction
                     };
 
                     _orderTracker.RegisterMapping(mapping);
@@ -380,13 +350,12 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     _status.ActiveMappings = _orderTracker.GetActiveCount();
                     _status.LastCopyTime = DateTime.Now;
 
-                    string crossInfo = isCrossOrder ? $" → {followerConfig.CrossOrderTarget}" : "";
-                    Log(LogLevel.Info, "COPY", $"{followerAccount.Name}: {orderAction} {quantity} {instrument.FullName}{crossInfo}");
+                    Log(GtLogLevel.Info, "COPY", $"{followerAccount.Name}: {orderAction} {quantity} {instrument.FullName}");
                 }
                 catch (Exception ex)
                 {
                     _status.FailedOrders++;
-                    Log(LogLevel.Error, "COPY", $"复制到 {followerConfig.AccountName} 失败: {ex.Message}");
+                    Log(GtLogLevel.Error, "COPY", $"复制到 {followerConfig.AccountName} 失败: {ex.Message}");
                 }
             }
 
@@ -405,7 +374,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             if (mappings.Count == 0)
                 return;
 
-            Log(LogLevel.Info, "SYNC", $"主订单取消 → 同步取消 {mappings.Count} 个从订单");
+            Log(GtLogLevel.Info, "SYNC", $"主订单取消 → 同步取消 {mappings.Count} 个从订单");
 
             foreach (var mapping in mappings)
             {
@@ -417,7 +386,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     }
                     catch (Exception ex)
                     {
-                        Log(LogLevel.Error, "SYNC", $"取消从订单失败: {ex.Message}");
+                        Log(GtLogLevel.Error, "SYNC", $"取消从订单失败: {ex.Message}");
                     }
                 }
             }
@@ -439,7 +408,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             if (mappings.Count == 0)
                 return;
 
-            Log(LogLevel.Info, "SYNC", $"主订单改价 → 同步修改 {mappings.Count} 个从订单");
+            Log(GtLogLevel.Info, "SYNC", $"主订单改价 → 同步修改 {mappings.Count} 个从订单");
 
             foreach (var mapping in mappings)
             {
@@ -455,7 +424,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     }
                     catch (Exception ex)
                     {
-                        Log(LogLevel.Error, "SYNC", $"修改从订单失败: {ex.Message}");
+                        Log(GtLogLevel.Error, "SYNC", $"修改从订单失败: {ex.Message}");
                     }
                 }
             }
@@ -466,7 +435,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// </summary>
         private void HandleOrderFilled(Order leaderOrder, int filledQty, double avgPrice)
         {
-            Log(LogLevel.Info, "FILL", $"主订单成交: {leaderOrder.OrderAction} {filledQty} @ {avgPrice:F2}");
+            Log(GtLogLevel.Info, "FILL", $"主订单成交: {leaderOrder.OrderAction} {filledQty} @ {avgPrice:F2}");
 
             // 清理已完成的映射
             _orderTracker.CleanupCompletedMappings();
@@ -531,7 +500,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// <summary>
         /// 记录日志
         /// </summary>
-        private void Log(LogLevel level, string category, string message)
+        private void Log(GtLogLevel level, string category, string message)
         {
             var entry = new LogEntry
             {
@@ -557,16 +526,10 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// </summary>
         private void OnGuardTriggered(GuardTriggerEventArgs args)
         {
-            Log(LogLevel.Warning, "GUARD", $"{args.AccountName}: 保护触发 - {args.Reason} - {args.Details}");
+            Log(GtLogLevel.Warning, "GUARD", $"{args.AccountName}: 保护触发 - {args.Reason} - {args.Details}");
 
             // 更新状态
             _status.GuardTriggerCount++;
-
-            // 发送邮件通知
-            if (_config.EnableEmailNotification && args.SendEmailAlert)
-            {
-                _ = _emailNotifier.SendGuardAlertAsync(args);
-            }
 
             // 如果配置禁用从账户，从列表中移除
             if (args.DisableFollower)
@@ -575,7 +538,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 if (followerConfig != null)
                 {
                     followerConfig.IsEnabled = false;
-                    Log(LogLevel.Info, "GUARD", $"{args.AccountName}: 已禁用跟随");
+                    Log(GtLogLevel.Info, "GUARD", $"{args.AccountName}: 已禁用跟随");
                 }
             }
 
@@ -585,7 +548,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// <summary>
         /// 处理 Guard 日志事件
         /// </summary>
-        private void OnGuardLog(string message, LogLevel level)
+        private void OnGuardLog(string message, GtLogLevel level)
         {
             Log(level, "GUARD", message);
         }

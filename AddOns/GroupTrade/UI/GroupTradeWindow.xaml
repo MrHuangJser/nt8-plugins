@@ -220,7 +220,6 @@
                             </DataGridComboBoxColumn.ItemsSource>
                         </DataGridComboBoxColumn>
                         <DataGridTextColumn Header="比例/手数" Binding="{Binding RatioDisplayValue}" Width="80" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="跨合约" Binding="{Binding CrossOrderTarget}" Width="70"/>
                         <DataGridTextColumn Header="最小" Binding="{Binding MinQuantity}" Width="50"/>
                         <DataGridTextColumn Header="最大" Binding="{Binding MaxQuantity}" Width="50"/>
                         <DataGridTextColumn Header="备注" Binding="{Binding Notes}" Width="*"/>
@@ -251,9 +250,7 @@
                         <RadioButton x:Name="ModeAllOrders" Content="All Orders" Foreground="#DCDCDC"
                                      IsChecked="True" Margin="0,0,15,0" GroupName="CopyMode"/>
                         <RadioButton x:Name="ModeMarketOnly" Content="Market Only" Foreground="#DCDCDC"
-                                     Margin="0,0,15,0" GroupName="CopyMode"/>
-                        <RadioButton x:Name="ModeATMCopy" Content="ATM Copy" Foreground="#DCDCDC"
-                                     GroupName="CopyMode" IsEnabled="False"/>
+                                     GroupName="CopyMode"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">

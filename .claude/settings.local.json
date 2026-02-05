@@ -12,7 +12,13 @@
       "mcp__plugin_context7-plugin_context7__query-docs",
       "mcp__web-reader__webReader",
       "mcp__web-search-prime__webSearchPrime",
-      "WebFetch(domain:replikanto.com)"
+      "WebFetch(domain:replikanto.com)",
+      "mcp__zread__get_repo_structure",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(dotnet build:*)",
+      "Bash(msbuild:*)",
+      "Bash(find:*)",
+      "Bash(xargs:*)"
     ]
   }
 }

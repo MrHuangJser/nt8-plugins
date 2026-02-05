@@ -17,6 +17,16 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         private string _lastError;
         private DateTime? _lastCopyTime;
         private DateTime? _startTime;
+        private int _guardTriggerCount;
+
+        /// <summary>
+        /// 保护触发次数
+        /// </summary>
+        public int GuardTriggerCount
+        {
+            get => _guardTriggerCount;
+            set { _guardTriggerCount = value; OnPropertyChanged(nameof(GuardTriggerCount)); }
+        }
 
         /// <summary>
         /// 是否正在运行

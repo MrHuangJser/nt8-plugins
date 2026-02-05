@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using NinjaTrader.NinjaScript.AddOns.GroupTrade.Core;
-using NinjaTrader.NinjaScript.AddOns.GroupTrade.Services;
 
 namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
 {
@@ -32,11 +31,6 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         /// 是否启用复制
         /// </summary>
         public bool IsEnabled { get; set; } = false;
-
-        /// <summary>
-        /// 复制模式
-        /// </summary>
-        public CopyMode CopyMode { get; set; } = CopyMode.AllOrders;
 
         /// <summary>
         /// 默认比例模式（用于新添加的从账户）
@@ -89,59 +83,6 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         /// </summary>
         public GuardConfiguration GuardConfiguration { get; set; } = new GuardConfiguration();
 
-        /// <summary>
-        /// 连续亏损保护阈值
-        /// </summary>
-        public int GuardConsecutiveLossCount { get; set; } = 3;
-
-        /// <summary>
-        /// 日亏损限额 (USD)
-        /// </summary>
-        public double GuardDailyLossLimit { get; set; } = 500.0;
-
-        /// <summary>
-        /// 权益跌幅保护阈值 (%)
-        /// </summary>
-        public double GuardEquityDrawdownPercent { get; set; } = 5.0;
-
-        #endregion
-
-        #region 邮件通知
-
-        /// <summary>
-        /// 启用邮件通知
-        /// </summary>
-        public bool EnableEmailNotification { get; set; } = false;
-
-        /// <summary>
-        /// 邮件配置
-        /// </summary>
-        public EmailConfiguration EmailConfiguration { get; set; } = new EmailConfiguration();
-
-        #endregion
-
-        #region 网络设置
-
-        /// <summary>
-        /// 启用 Network Mode（局域网）
-        /// </summary>
-        public bool EnableNetworkMode { get; set; } = false;
-
-        /// <summary>
-        /// Network Mode 监听端口
-        /// </summary>
-        public int NetworkPort { get; set; } = 5678;
-
-        /// <summary>
-        /// 启用 Remote Mode（互联网）
-        /// </summary>
-        public bool EnableRemoteMode { get; set; } = false;
-
-        /// <summary>
-        /// Remote ID
-        /// </summary>
-        public string RemoteId { get; set; } = "";
-
         #endregion
 
         /// <summary>
@@ -177,7 +118,6 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
                 LeaderAccountName = "",
                 FollowerAccounts = new List<FollowerAccountConfig>(),
                 IsEnabled = false,
-                CopyMode = CopyMode.AllOrders,
                 DefaultRatioMode = RatioMode.ExactQuantity,
                 SyncStopLoss = true,
                 SyncTakeProfit = true,
@@ -187,8 +127,6 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
                 StealthMode = false,
                 EnableFollowerGuard = false,
                 GuardConfiguration = GuardConfiguration.CreateDefault(),
-                EnableEmailNotification = false,
-                EmailConfiguration = new EmailConfiguration(),
                 LastModified = DateTime.Now
             };
         }

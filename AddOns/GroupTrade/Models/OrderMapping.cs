@@ -59,19 +59,19 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         public string InstrumentName { get; set; }
 
         /// <summary>
+        /// 合约引用
+        /// </summary>
+        public Instrument Instrument { get; set; }
+
+        /// <summary>
         /// 订单方向
         /// </summary>
         public OrderAction OrderAction { get; set; }
 
         /// <summary>
-        /// 是否为跨合约复制
+        /// 订单动作（别名）
         /// </summary>
-        public bool IsCrossOrder { get; set; }
-
-        /// <summary>
-        /// 跨合约目标 Symbol
-        /// </summary>
-        public string CrossOrderTarget { get; set; }
+        public OrderAction Action => OrderAction;
 
         /// <summary>
         /// 创建时间
@@ -93,8 +93,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         /// </summary>
         public string ToLogString()
         {
-            string cross = IsCrossOrder ? $" → {CrossOrderTarget}" : "";
-            return $"{FollowerAccountName}: {OrderAction} {FollowerQuantity} {InstrumentName}{cross} [{LastKnownState}]";
+            return $"{FollowerAccountName}: {OrderAction} {FollowerQuantity} {InstrumentName} [{LastKnownState}]";
         }
     }
 }

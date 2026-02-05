@@ -158,21 +158,5 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 return leaderQuantity;
             }
         }
-
-        /// <summary>
-        /// 应用跨合约转换比例
-        /// </summary>
-        /// <param name="quantity">原始手数</param>
-        /// <param name="conversionRatio">转换比例（如 Mini:Micro = 10:1）</param>
-        /// <returns>转换后的手数</returns>
-        public int ApplyCrossOrderConversion(int quantity, double conversionRatio)
-        {
-            if (conversionRatio <= 0) conversionRatio = 1;
-
-            double converted = quantity * conversionRatio;
-            int result = (int)Math.Round(converted);
-
-            return result < 1 ? 1 : result;
-        }
     }
 }
