@@ -74,6 +74,11 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         public bool StealthMode { get; set; } = false;
 
         /// <summary>
+        /// 停止引擎时是否取消从账户的所有挂单
+        /// </summary>
+        public bool CancelFollowerOrdersOnStop { get; set; } = true;
+
+        /// <summary>
         /// 启用 Follower Guard 保护
         /// </summary>
         public bool EnableFollowerGuard { get; set; } = false;

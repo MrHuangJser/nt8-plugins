@@ -503,6 +503,20 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.UI
         private void LeaderAccountCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             UpdateLeaderAccountInfo();
+
+            // 安全检查：如果新选择的主账户已存在于从账户列表中，自动禁用该从账户
+            string leaderName = LeaderAccountCombo.SelectedItem?.ToString();
+            if (!string.IsNullOrEmpty(leaderName))
+            {
+                var conflicting = _followerConfigs.FirstOrDefault(f => f.AccountName == leaderName);
+                if (conflicting != null)
+                {
+                    conflicting.IsEnabled = false;
+                    FollowerGrid.Items.Refresh();
+                    MessageBox.Show($"从账户 '{leaderName}' 与主账户相同，已自动禁用。\n主从账户相同会导致自我复制或对冲风险。",
+                        "安全提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
         }
 
         private void RefreshAccounts_Click(object sender, RoutedEventArgs e)

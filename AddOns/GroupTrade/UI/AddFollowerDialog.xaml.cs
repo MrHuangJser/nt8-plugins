@@ -143,7 +143,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.UI
             get
             {
                 if (double.TryParse(RatioValueText.Text, out var value))
-                    return value;
+                    return Math.Max(0.01, Math.Abs(value));  // 强制正数
                 return 1.0;
             }
         }

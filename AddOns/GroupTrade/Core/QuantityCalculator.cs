@@ -18,8 +18,8 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// <param name="followerAccount">从账户</param>
         /// <param name="enabledFollowerCount">启用的从账户总数（EqualQuantity模式使用）</param>
         /// <param name="currentPosition">当前持仓（PercentageChange模式使用）</param>
-        /// <returns>计算后的手数和是否需要反转方向</returns>
-        public (int quantity, bool reverseDirection) Calculate(
+        /// <returns>计算后的手数</returns>
+        public int Calculate(
             int leaderQuantity,
             FollowerAccountConfig config,
             Account leaderAccount,
@@ -28,7 +28,6 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             int currentPosition = 0)
         {
             double rawQuantity;
-            bool reverseDirection = false;
 
             switch (config.RatioMode)
             {
@@ -44,12 +43,8 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     break;
 
                 case RatioMode.Ratio:
-                    // 固定比例：支持负数反向
-                    rawQuantity = leaderQuantity * Math.Abs(config.FixedRatio);
-                    if (config.FixedRatio < 0)
-                    {
-                        reverseDirection = true;
-                    }
+                    // 固定比例：强制使用正数，防止反向下单导致对冲
+                    rawQuantity = leaderQuantity * Math.Max(0.01, Math.Abs(config.FixedRatio));
                     break;
 
                 case RatioMode.NetLiquidation:
@@ -98,7 +93,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 quantity = 1;
             }
 
-            return (quantity, reverseDirection);
+            return quantity;
         }
 
         /// <summary>

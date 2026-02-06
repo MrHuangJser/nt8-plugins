@@ -123,6 +123,15 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             _followerAccounts.Clear();
             foreach (var followerConfig in config.FollowerAccounts.Where(f => f.IsEnabled))
             {
+                // 安全检查：跳过与主账户相同的配置，防止自我复制导致对冲
+                if (followerConfig.AccountName == config.LeaderAccountName)
+                {
+                    Log(GtLogLevel.Warning, "ENGINE",
+                        $"从账户 {followerConfig.AccountName} 与主账户相同，已自动跳过");
+                    followerConfig.IsEnabled = false;
+                    continue;
+                }
+
                 var account = GetAccountByName(followerConfig.AccountName);
                 if (account != null)
                 {
@@ -181,6 +190,12 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             if (!_isRunning)
                 return;
 
+            // 取消所有从账户的活跃订单（防止残留挂单成交导致对冲）
+            if (_config?.CancelFollowerOrdersOnStop ?? true)
+            {
+                CancelAllFollowerOrders();
+            }
+
             // 取消订阅事件
             if (_leaderAccount != null)
             {
@@ -202,6 +217,55 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
 
             Log(GtLogLevel.Info, "ENGINE", "复制引擎已停止");
             OnStatusChanged?.Invoke(_status);
+        }
+
+        /// <summary>
+        /// 取消所有从账户的活跃订单
+        /// </summary>
+        private void CancelAllFollowerOrders()
+        {
+            var activeMappings = _orderTracker.GetAllActiveMappings();
+            if (activeMappings.Count == 0)
+            {
+                Log(GtLogLevel.Info, "ENGINE", "没有活跃的从订单需要取消");
+                return;
+            }
+
+            Log(GtLogLevel.Info, "ENGINE", $"正在取消 {activeMappings.Count} 个从账户订单...");
+
+            foreach (var mapping in activeMappings)
+            {
+                try
+                {
+                    if (mapping.FollowerAccount == null)
+                        continue;
+
+                    // 通过订单名称查找最新的订单对象
+                    string expectedName = $"{COPY_TAG}{mapping.MasterOrderId}";
+                    Order orderToCancel = null;
+
+                    foreach (var order in mapping.FollowerAccount.Orders)
+                    {
+                        if (order.Name == expectedName && !Order.IsTerminalState(order.OrderState))
+                        {
+                            orderToCancel = order;
+                            break;
+                        }
+                    }
+
+                    if (orderToCancel != null)
+                    {
+                        mapping.FollowerAccount.Cancel(new[] { orderToCancel });
+                        Log(GtLogLevel.Info, "ENGINE",
+                            $"已取消 {mapping.FollowerAccountName} 订单: {orderToCancel.OrderId}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(GtLogLevel.Error, "ENGINE",
+                        $"取消 {mapping.FollowerAccountName} 订单失败: {ex.Message}");
+                }
+            }
         }
 
         #endregion
@@ -309,7 +373,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 try
                 {
                     // 计算手数
-                    var (quantity, reverseDirection) = _quantityCalculator.Calculate(
+                    int quantity = _quantityCalculator.Calculate(
                         leaderOrder.Quantity,
                         followerConfig,
                         _leaderAccount,
@@ -317,12 +381,8 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                         enabledCount
                     );
 
-                    // 确定订单方向
+                    // 使用主账户相同的订单方向（不支持反向，防止对冲）
                     OrderAction orderAction = leaderOrder.OrderAction;
-                    if (reverseDirection)
-                    {
-                        orderAction = ReverseOrderAction(orderAction);
-                    }
 
                     // 使用主账户相同的合约
                     Instrument instrument = leaderOrder.Instrument;
@@ -497,7 +557,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     var followerConfig = _config.FollowerAccounts.FirstOrDefault(f => f.AccountName == mapping.FollowerAccountName);
                     if (followerConfig != null)
                     {
-                        var (newQuantity, _) = _quantityCalculator.Calculate(
+                        int newQuantity = _quantityCalculator.Calculate(
                             leaderOrder.Quantity,
                             followerConfig,
                             _leaderAccount,
@@ -556,26 +616,6 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
 
             // 检查是否在从订单映射中
             return _orderTracker.IsFollowerOrder(order.OrderId);
-        }
-
-        /// <summary>
-        /// 反转订单方向
-        /// </summary>
-        private OrderAction ReverseOrderAction(OrderAction action)
-        {
-            switch (action)
-            {
-                case OrderAction.Buy:
-                    return OrderAction.SellShort;
-                case OrderAction.BuyToCover:
-                    return OrderAction.Sell;
-                case OrderAction.Sell:
-                    return OrderAction.BuyToCover;
-                case OrderAction.SellShort:
-                    return OrderAction.Buy;
-                default:
-                    return action;
-            }
         }
 
         /// <summary>

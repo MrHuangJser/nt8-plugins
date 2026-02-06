@@ -26,9 +26,14 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
 
         /// <summary>
         /// 固定比例值（RatioMode.Ratio 时使用）
-        /// 支持 -100 到 100，负数表示反向交易
+        /// 必须为正数，防止反向交易导致对冲
         /// </summary>
-        public double FixedRatio { get; set; } = 1.0;
+        private double _fixedRatio = 1.0;
+        public double FixedRatio
+        {
+            get => _fixedRatio;
+            set => _fixedRatio = Math.Max(0.01, Math.Abs(value));
+        }
 
         /// <summary>
         /// 预分配固定手数（RatioMode.PreAllocation 时使用）
