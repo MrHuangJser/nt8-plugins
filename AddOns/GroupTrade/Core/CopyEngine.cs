@@ -253,11 +253,11 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 {
                     case OrderState.Submitted:
                     case OrderState.Accepted:
-                        // 新订单：仅在 Submitted 时处理，避免重复
-                        if (e.OrderState == OrderState.Submitted)
-                        {
-                            HandleNewOrder(order);
-                        }
+                    case OrderState.Working:
+                        // 新订单：在 Submitted/Accepted/Working 状态时处理
+                        // 市价单可能跳过 Submitted 直接进入 Accepted 或 Working
+                        // HandleNewOrder 内部会通过 _orderTracker.HasMapping 防止重复复制
+                        HandleNewOrder(order);
                         break;
 
                     case OrderState.Cancelled:
@@ -288,6 +288,14 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         /// </summary>
         private void HandleNewOrder(Order leaderOrder)
         {
+            // 防重复：检查是否已为此订单创建过映射
+            // 市价单可能触发多个状态事件 (Submitted → Accepted → Working)
+            if (_orderTracker.HasMapping(leaderOrder.OrderId))
+            {
+                Log(GtLogLevel.Info, "DEBUG", $"订单已复制过，跳过: {leaderOrder.OrderId}");
+                return;
+            }
+
             Log(GtLogLevel.Info, "COPY", $"检测到主账户新订单: {leaderOrder.OrderAction} {leaderOrder.Quantity} {leaderOrder.Instrument.FullName}");
 
             int enabledCount = _config.EnabledFollowerCount;
