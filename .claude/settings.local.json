@@ -18,7 +18,9 @@
       "Bash(dotnet build:*)",
       "Bash(msbuild:*)",
       "Bash(find:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "WebSearch",
+      "WebFetch(domain:ninjatrader.com)"
     ]
   }
 }
