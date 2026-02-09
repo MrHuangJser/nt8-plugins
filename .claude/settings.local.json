@@ -3,10 +3,9 @@
     "allow": [
       "Bash(git init)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: NinjaTrader 8 custom indicators\n\n- MidPriceLine: displays midpoint of High and Low for each bar\n- DojiMarker: marks Doji candles with configurable offset\n- VSCode project setup for IntelliSense support\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git remote add:*)",
       "Bash(git push:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nReorganize project structure\n\n- Move indicators to Indicators/ directory\n- Create DrawingTools/ directory for future drawing tools\n- Add README.md with project documentation\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
       "mcp__plugin_context7-plugin_context7__resolve-library-id",
       "mcp__zread__search_doc",
       "mcp__plugin_context7-plugin_context7__query-docs",
