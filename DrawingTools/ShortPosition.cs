@@ -21,7 +21,8 @@ namespace NinjaTrader.NinjaScript.DrawingTools
 {
     /// <summary>
     /// ShortPosition - 空头画图工具
-    /// 类似 TradingView 的空头工具，支持三点绘制（Entry/Stop/Target）
+    /// 类似 TradingView 的空头工具，支持四锚点绘制
+    /// 左上(Stop)、左中(Entry)、左下(Target)、右中(宽度控制)
     /// 自动计算仓位并更新 Chart Trader 手数
     /// </summary>
     public class ShortPosition : DrawingTool
@@ -62,9 +63,12 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         [Display(Order = 3)]
         public ChartAnchor TargetAnchor { get; set; }
 
+        [Display(Order = 4)]
+        public ChartAnchor RightAnchor { get; set; }
+
         public override IEnumerable<ChartAnchor> Anchors
         {
-            get { return new[] { EntryAnchor, StopAnchor, TargetAnchor }; }
+            get { return new[] { EntryAnchor, StopAnchor, TargetAnchor, RightAnchor }; }
         }
 
         #endregion
@@ -134,7 +138,6 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         {
             get
             {
-                // 返回一个简单的向下箭头图标表示空头
                 return "▼";
             }
         }
@@ -153,6 +156,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 EntryAnchor = new ChartAnchor { IsEditing = true, DrawingTool = this };
                 StopAnchor = new ChartAnchor { IsEditing = false, DrawingTool = this };
                 TargetAnchor = new ChartAnchor { IsEditing = false, DrawingTool = this };
+                RightAnchor = new ChartAnchor { IsEditing = false, DrawingTool = this };
 
                 // 默认参数
                 FixedRiskAmount = 200;
@@ -187,23 +191,22 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 case DrawingState.Moving:
                     return IsLocked ? Cursors.No : Cursors.SizeAll;
                 case DrawingState.Editing:
-                    return IsLocked ? Cursors.No : Cursors.SizeNS;
+                    if (IsLocked) return Cursors.No;
+                    if (editingAnchor == RightAnchor)
+                        return Cursors.SizeWE;
+                    if (editingAnchor == StopAnchor || editingAnchor == TargetAnchor)
+                        return Cursors.SizeNS;
+                    return Cursors.SizeAll;
                 default:
-                    // 检查是否在锚点附近
                     if (!IsLocked)
                     {
-                        foreach (ChartAnchor anchor in Anchors)
-                        {
-                            Point anchorPoint = anchor.GetPoint(chartControl, chartPanel, chartScale);
-                            if (Math.Abs(point.Y - anchorPoint.Y) <= cursorSensitivity &&
-                                point.X >= Math.Min(EntryAnchor.GetPoint(chartControl, chartPanel, chartScale).X,
-                                                    StopAnchor.GetPoint(chartControl, chartPanel, chartScale).X) &&
-                                point.X <= Math.Max(EntryAnchor.GetPoint(chartControl, chartPanel, chartScale).X,
-                                                    TargetAnchor.GetPoint(chartControl, chartPanel, chartScale).X))
-                            {
-                                return Cursors.SizeNS;
-                            }
-                        }
+                        ChartAnchor closest = GetClosestAnchor(chartControl, chartPanel, chartScale, point);
+                        if (closest == RightAnchor)
+                            return Cursors.SizeWE;
+                        if (closest == StopAnchor || closest == TargetAnchor)
+                            return Cursors.SizeNS;
+                        if (closest == EntryAnchor)
+                            return Cursors.SizeAll;
                     }
                     return IsLocked ? Cursors.Arrow : Cursors.SizeAll;
             }
@@ -220,7 +223,14 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             Point entryPoint = EntryAnchor.GetPoint(chartControl, chartPanel, chartScale);
             Point stopPoint = StopAnchor.GetPoint(chartControl, chartPanel, chartScale);
             Point targetPoint = TargetAnchor.GetPoint(chartControl, chartPanel, chartScale);
-            return new[] { entryPoint, stopPoint, targetPoint };
+            Point rightPoint = RightAnchor.GetPoint(chartControl, chartPanel, chartScale);
+            return new[]
+            {
+                new Point(entryPoint.X, entryPoint.Y),   // 左中 Entry
+                new Point(entryPoint.X, stopPoint.Y),     // 左上 Stop
+                new Point(entryPoint.X, targetPoint.Y),   // 左下 Target
+                new Point(rightPoint.X, entryPoint.Y)     // 右中 Right
+            };
         }
 
         public override bool IsAlertConditionTrue(AlertConditionItem alertConditionItem,
@@ -236,7 +246,6 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             if (DrawingState == DrawingState.Building)
                 return true;
 
-            // 检查任意锚点是否在可见范围内
             foreach (ChartAnchor anchor in Anchors)
             {
                 if (anchor.Time >= firstTimeOnChart && anchor.Time <= lastTimeOnChart)
@@ -276,28 +285,36 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                         dataPoint.CopyDataValues(EntryAnchor);
                         EntryAnchor.IsEditing = false;
 
-                        // 初始化 Stop 和 Target 到同一位置
+                        // 初始化所有锚点到同一位置
                         dataPoint.CopyDataValues(StopAnchor);
                         dataPoint.CopyDataValues(TargetAnchor);
+                        dataPoint.CopyDataValues(RightAnchor);
                         StopAnchor.IsEditing = true;
                     }
                     else if (StopAnchor.IsEditing)
                     {
-                        // 第二次点击 - 设置 Stop
-                        dataPoint.CopyDataValues(StopAnchor);
+                        // 第二次点击 - 设置 Stop（空头: Stop 在上方）
+                        StopAnchor.Price = Math.Max(dataPoint.Price, EntryAnchor.Price + tickSize);
+                        StopAnchor.Time = EntryAnchor.Time;
                         StopAnchor.IsEditing = false;
                         TargetAnchor.IsEditing = true;
 
-                        // 空头: 自动设置 Target 为对称位置（2R）
+                        // RightAnchor 取鼠标当前时间(X)作为右边界
+                        RightAnchor.Time = dataPoint.Time;
+                        RightAnchor.Price = EntryAnchor.Price;
+
+                        // 自动设置 Target 为对称位置（2R）
                         double entryPrice = EntryAnchor.Price;
                         double stopPrice = StopAnchor.Price;
-                        double risk = stopPrice - entryPrice; // 空头: Stop 在上方
-                        TargetAnchor.Price = entryPrice - risk * 2; // 默认 2R，Target 在下方
+                        double risk = stopPrice - entryPrice;
+                        TargetAnchor.Price = entryPrice - risk * 2;
+                        TargetAnchor.Time = EntryAnchor.Time;
                     }
                     else if (TargetAnchor.IsEditing)
                     {
-                        // 第三次点击 - 设置 Target，完成绘制
-                        dataPoint.CopyDataValues(TargetAnchor);
+                        // 第三次点击 - 设置 Target（空头: Target 在下方），完成绘制
+                        TargetAnchor.Price = Math.Min(dataPoint.Price, EntryAnchor.Price - tickSize);
+                        TargetAnchor.Time = EntryAnchor.Time;
                         TargetAnchor.IsEditing = false;
                         DrawingState = DrawingState.Normal;
                         IsSelected = false;
@@ -331,68 +348,86 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 case DrawingState.Building:
                     if (StopAnchor.IsEditing)
                     {
-                        // 空头: Stop 跟随鼠标，但限制在 Entry 上方
                         double entryPrice = EntryAnchor.Price;
                         double mousePrice = dataPoint.Price;
 
-                        // 空头: Stop 必须在 Entry 上方
+                        // 空头: Stop 只跟随鼠标 Y（价格），限制在 Entry 上方
                         if (mousePrice > entryPrice)
                         {
-                            dataPoint.CopyDataValues(StopAnchor);
+                            StopAnchor.Price = mousePrice;
                         }
                         else
                         {
-                            // 如果鼠标在 Entry 下方，将 Stop 设置为略高于 Entry
-                            StopAnchor.Time = dataPoint.Time;
                             StopAnchor.Price = entryPrice + tickSize;
                         }
+                        // Stop 的 X（时间）始终与 Entry 一致
+                        StopAnchor.Time = EntryAnchor.Time;
+
+                        // RightAnchor 跟随鼠标 X（时间），控制矩形宽度
+                        RightAnchor.Time = dataPoint.Time;
+                        RightAnchor.Price = EntryAnchor.Price;
                     }
                     else if (TargetAnchor.IsEditing)
                     {
-                        // 空头: Target 跟随鼠标，但限制在 Entry 下方
                         double entryPrice = EntryAnchor.Price;
                         double mousePrice = dataPoint.Price;
 
-                        // 空头: Target 必须在 Entry 下方
+                        // 空头: Target 只跟随鼠标 Y（价格），限制在 Entry 下方
                         if (mousePrice < entryPrice)
                         {
-                            dataPoint.CopyDataValues(TargetAnchor);
+                            TargetAnchor.Price = mousePrice;
                         }
                         else
                         {
-                            // 如果鼠标在 Entry 上方，将 Target 设置为略低于 Entry
-                            TargetAnchor.Time = dataPoint.Time;
                             TargetAnchor.Price = entryPrice - tickSize;
                         }
+                        // Target 的 X（时间）始终与 Entry 一致
+                        TargetAnchor.Time = EntryAnchor.Time;
                     }
                     break;
 
                 case DrawingState.Editing:
                     if (editingAnchor != null)
                     {
-                        // 编辑单个锚点，但保持约束
                         if (editingAnchor == StopAnchor)
                         {
-                            // 空头: Stop 必须在 Entry 上方
+                            // 空头: Stop 只能上下移动，且必须在 Entry 上方
                             if (dataPoint.Price > EntryAnchor.Price)
-                                dataPoint.CopyDataValues(editingAnchor);
+                                StopAnchor.Price = dataPoint.Price;
+                            StopAnchor.Time = EntryAnchor.Time;
                         }
                         else if (editingAnchor == TargetAnchor)
                         {
-                            // 空头: Target 必须在 Entry 下方
+                            // 空头: Target 只能上下移动，且必须在 Entry 下方
                             if (dataPoint.Price < EntryAnchor.Price)
-                                dataPoint.CopyDataValues(editingAnchor);
+                                TargetAnchor.Price = dataPoint.Price;
+                            TargetAnchor.Time = EntryAnchor.Time;
+                        }
+                        else if (editingAnchor == RightAnchor)
+                        {
+                            // Right 只能左右移动
+                            RightAnchor.Time = dataPoint.Time;
+                            RightAnchor.Price = EntryAnchor.Price;
                         }
                         else
                         {
-                            // Entry 可以自由移动，但需要调整 Stop 和 Target 保持相对位置
-                            double oldEntry = EntryAnchor.Price;
-                            double newEntry = dataPoint.Price;
-                            double delta = newEntry - oldEntry;
+                            // Entry 可以自由移动，所有锚点跟随
+                            double oldPrice = EntryAnchor.Price;
+                            DateTime oldTime = EntryAnchor.Time;
 
                             dataPoint.CopyDataValues(EntryAnchor);
-                            StopAnchor.Price += delta;
-                            TargetAnchor.Price += delta;
+
+                            double priceDelta = EntryAnchor.Price - oldPrice;
+                            long timeDelta = EntryAnchor.Time.Ticks - oldTime.Ticks;
+
+                            StopAnchor.Price += priceDelta;
+                            StopAnchor.Time = EntryAnchor.Time;
+
+                            TargetAnchor.Price += priceDelta;
+                            TargetAnchor.Time = EntryAnchor.Time;
+
+                            RightAnchor.Price = EntryAnchor.Price;
+                            RightAnchor.Time = new DateTime(RightAnchor.Time.Ticks + timeDelta);
                         }
                     }
                     break;
@@ -413,6 +448,11 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             if (DrawingState == DrawingState.Moving || DrawingState == DrawingState.Editing)
             {
                 DrawingState = DrawingState.Normal;
+
+                // 确保锚点约束
+                StopAnchor.Time = EntryAnchor.Time;
+                TargetAnchor.Time = EntryAnchor.Time;
+                RightAnchor.Price = EntryAnchor.Price;
             }
             editingAnchor = null;
         }
@@ -420,14 +460,39 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         private ChartAnchor GetClosestAnchor(ChartControl chartControl, ChartPanel chartPanel,
                                               ChartScale chartScale, Point point)
         {
-            foreach (ChartAnchor anchor in Anchors)
+            Point entryPt = EntryAnchor.GetPoint(chartControl, chartPanel, chartScale);
+            Point stopPt = StopAnchor.GetPoint(chartControl, chartPanel, chartScale);
+            Point targetPt = TargetAnchor.GetPoint(chartControl, chartPanel, chartScale);
+            Point rightPt = RightAnchor.GetPoint(chartControl, chartPanel, chartScale);
+
+            double leftX = entryPt.X;
+            double rightX = rightPt.X;
+            double topY = Math.Min(entryPt.Y, Math.Min(stopPt.Y, targetPt.Y));
+            double bottomY = Math.Max(entryPt.Y, Math.Max(stopPt.Y, targetPt.Y));
+
+            // 右中锚点 - 右边界上从 topY 到 bottomY 范围
+            if (Math.Abs(point.X - rightX) <= cursorSensitivity &&
+                point.Y >= topY - cursorSensitivity && point.Y <= bottomY + cursorSensitivity)
+                return RightAnchor;
+
+            bool inHorizontalRange = point.X >= leftX - cursorSensitivity &&
+                                      point.X <= rightX + cursorSensitivity;
+
+            if (inHorizontalRange)
             {
-                Point anchorPoint = anchor.GetPoint(chartControl, chartPanel, chartScale);
-                if (Math.Abs(point.Y - anchorPoint.Y) <= cursorSensitivity)
-                {
-                    return anchor;
-                }
+                // 左上锚点 - Stop 线（空头 Stop 在上方）
+                if (Math.Abs(point.Y - stopPt.Y) <= cursorSensitivity)
+                    return StopAnchor;
+
+                // 左下锚点 - Target 线（空头 Target 在下方）
+                if (Math.Abs(point.Y - targetPt.Y) <= cursorSensitivity)
+                    return TargetAnchor;
+
+                // 左中锚点 - Entry 线
+                if (Math.Abs(point.Y - entryPt.Y) <= cursorSensitivity)
+                    return EntryAnchor;
             }
+
             return null;
         }
 
@@ -457,35 +522,34 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             Point entryPoint = EntryAnchor.GetPoint(chartControl, chartPanel, chartScale);
             Point stopPoint = StopAnchor.GetPoint(chartControl, chartPanel, chartScale);
             Point targetPoint = TargetAnchor.GetPoint(chartControl, chartPanel, chartScale);
+            Point rightPoint = RightAnchor.GetPoint(chartControl, chartPanel, chartScale);
 
-            // 计算区域边界
-            float minX = (float)Math.Min(Math.Min(entryPoint.X, stopPoint.X), targetPoint.X);
-            float maxX = (float)Math.Max(Math.Max(entryPoint.X, stopPoint.X), targetPoint.X);
+            // 使用 EntryAnchor.X 作为左边界，RightAnchor.X 作为右边界
+            float leftX = (float)entryPoint.X;
+            float rightX = (float)rightPoint.X;
 
             // 确保有最小宽度
-            if (maxX - minX < 50)
+            if (rightX <= leftX + 50)
             {
-                float center = (minX + maxX) / 2;
-                minX = center - 100;
-                maxX = center + 100;
+                rightX = leftX + 200;
             }
 
             // 计算值
             CalculateValues();
 
             // 1. 渲染填充区域
-            RenderZones(chartScale, minX, maxX, entryPoint, stopPoint, targetPoint);
+            RenderZones(chartScale, leftX, rightX, entryPoint, stopPoint, targetPoint);
 
             // 2. 渲染价格线
-            RenderPriceLines(minX, maxX, entryPoint, stopPoint, targetPoint);
+            RenderPriceLines(leftX, rightX, entryPoint, stopPoint, targetPoint);
 
             // 3. 渲染价格标签
-            RenderPriceLabels(chartControl, maxX, entryPoint, stopPoint, targetPoint);
+            RenderPriceLabels(chartControl, rightX, entryPoint, stopPoint, targetPoint);
 
             // 4. 渲染信息面板
             if (ShowInfoPanel && DrawingState != DrawingState.Building)
             {
-                RenderInfoPanel(chartControl, chartPanel, minX, (float)stopPoint.Y);
+                RenderInfoPanel(chartControl, chartPanel, leftX, (float)stopPoint.Y);
             }
 
             // 5. 更新 Chart Trader QTY (实时更新，包括拖拽过程中)
@@ -495,7 +559,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             }
         }
 
-        private void RenderZones(ChartScale chartScale, float minX, float maxX,
+        private void RenderZones(ChartScale chartScale, float leftX, float rightX,
                                   Point entryPoint, Point stopPoint, Point targetPoint)
         {
             float entryY = (float)entryPoint.Y;
@@ -507,7 +571,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             {
                 float top = Math.Min(entryY, stopY);
                 float height = Math.Abs(entryY - stopY);
-                var stopRect = new SharpDX.RectangleF(minX, top, maxX - minX, height);
+                var stopRect = new SharpDX.RectangleF(leftX, top, rightX - leftX, height);
                 RenderTarget.FillRectangle(stopRect, stopZoneBrush);
             }
 
@@ -516,12 +580,12 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             {
                 float top = Math.Min(entryY, targetY);
                 float height = Math.Abs(entryY - targetY);
-                var targetRect = new SharpDX.RectangleF(minX, top, maxX - minX, height);
+                var targetRect = new SharpDX.RectangleF(leftX, top, rightX - leftX, height);
                 RenderTarget.FillRectangle(targetRect, targetZoneBrush);
             }
         }
 
-        private void RenderPriceLines(float minX, float maxX,
+        private void RenderPriceLines(float leftX, float rightX,
                                        Point entryPoint, Point stopPoint, Point targetPoint)
         {
             float entryY = (float)entryPoint.Y;
@@ -532,8 +596,8 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             using (var entryBrush = EntryColor.ToDxBrush(RenderTarget))
             {
                 RenderTarget.DrawLine(
-                    new SharpDX.Vector2(minX, entryY),
-                    new SharpDX.Vector2(maxX, entryY),
+                    new SharpDX.Vector2(leftX, entryY),
+                    new SharpDX.Vector2(rightX, entryY),
                     entryBrush, LineWidth);
             }
 
@@ -541,8 +605,8 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             using (var stopBrush = StopColor.ToDxBrush(RenderTarget))
             {
                 RenderTarget.DrawLine(
-                    new SharpDX.Vector2(minX, stopY),
-                    new SharpDX.Vector2(maxX, stopY),
+                    new SharpDX.Vector2(leftX, stopY),
+                    new SharpDX.Vector2(rightX, stopY),
                     stopBrush, LineWidth);
             }
 
@@ -550,16 +614,16 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             using (var targetBrush = TargetColor.ToDxBrush(RenderTarget))
             {
                 RenderTarget.DrawLine(
-                    new SharpDX.Vector2(minX, targetY),
-                    new SharpDX.Vector2(maxX, targetY),
+                    new SharpDX.Vector2(leftX, targetY),
+                    new SharpDX.Vector2(rightX, targetY),
                     targetBrush, LineWidth);
             }
         }
 
-        private void RenderPriceLabels(ChartControl chartControl, float maxX,
+        private void RenderPriceLabels(ChartControl chartControl, float rightX,
                                         Point entryPoint, Point stopPoint, Point targetPoint)
         {
-            float labelX = maxX + 5;
+            float labelX = rightX + 5;
 
             // Entry 标签
             string entryText = $"Entry: {EntryAnchor.Price:F2}  |  Qty: {calculatedQty}";
