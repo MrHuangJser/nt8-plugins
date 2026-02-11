@@ -411,23 +411,14 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                         }
                         else
                         {
-                            // Entry 可以自由移动，所有锚点跟随
-                            double oldPrice = EntryAnchor.Price;
-                            DateTime oldTime = EntryAnchor.Time;
-
+                            // Entry 自由移动：上下控制入场价，左右控制左边界宽度
+                            // Stop/Target 价格不变，X 跟随 Entry 保持垂直对齐
+                            // RightAnchor 不跟随
                             dataPoint.CopyDataValues(EntryAnchor);
 
-                            double priceDelta = EntryAnchor.Price - oldPrice;
-                            long timeDelta = EntryAnchor.Time.Ticks - oldTime.Ticks;
-
-                            StopAnchor.Price += priceDelta;
                             StopAnchor.Time = EntryAnchor.Time;
-
-                            TargetAnchor.Price += priceDelta;
                             TargetAnchor.Time = EntryAnchor.Time;
-
                             RightAnchor.Price = EntryAnchor.Price;
-                            RightAnchor.Time = new DateTime(RightAnchor.Time.Ticks + timeDelta);
                         }
                     }
                     break;
