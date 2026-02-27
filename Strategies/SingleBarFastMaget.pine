@@ -1,0 +1,50 @@
+//@version=6
+strategy("SingleBarFastMaget", overlay=true)
+
+strategyDirection = input.session("都做","策略方向",["都做",'只做空','只做多'], group = "测试配置")
+
+ethSession = input.session("1800-0930", "ETH时段", group = "时段配置", tooltip = "电子盘交易时段，默认18:00-09:30（美东时间）")
+inETH = not na(time(timeframe.period, ethSession))
+
+maxLossValue = input.int(100, "最大单仓亏损", step = 1, group = "仓位管理")
+longMinProfitPoint = input.float(1, "多头最小利润点数", step = 0.25, group = "仓位管理")
+shortMinProfitPoint = input.float(1, "空头最小利润点数", step = 0.25, group = "仓位管理")
+
+bullIBSTarget = input.int(70, "多头信号最低IBS值", step = 1, group = "入场配置")
+bearIBSTarget = input.int(30, "空头信号最大IBS值", step = 1, group = "入场配置")
+enableAtrFilter = input.bool(true, "开启ATR过滤", group = "入场配置")
+atrLength = input.int(5, "ATR长度", step = 1, group = "入场配置")
+minAtrValue = input.float(1.3, "最小ATR增幅", step = 0.05, group = "入场配置")
+
+isBullBar = close > open
+isBearBar = close < open
+
+ibs = math.round((close - low) / (high - low) * 100)
+
+atr = ta.atr(atrLength)
+
+longCondition = inETH and isBullBar  and ibs > bullIBSTarget  and high - close >= longMinProfitPoint and (strategyDirection == '都做' or strategyDirection == '只做多') and (enableAtrFilter ? atr / atr[1] >= minAtrValue : true)
+shortCondition = inETH and isBearBar and ibs < bearIBSTarget and close - low >= shortMinProfitPoint and (strategyDirection == '都做' or strategyDirection == '只做空') and (enableAtrFilter ? atr / atr[1] >= minAtrValue : true)
+
+lowest = ta.lowest(low,2)
+
+if strategy.position_size == 0
+    strategy.cancel_all()
+    if longCondition
+        limitPrice = (high - low) / 2 + high
+        stopPrice = low
+        qty = math.floor(maxLossValue / (close - low) / syminfo.pointvalue)
+        if (limitPrice - close) / (close - stopPrice) >= 0.25
+            strategy.entry("Long",strategy.long, qty = qty)
+            strategy.exit("Exit Long", 'Long', limit = limitPrice, stop = stopPrice - syminfo.mintick)
+    if shortCondition
+        limitPrice =low - (high - low) / 2 
+        stopPrice = high
+        qty = math.floor(maxLossValue / (high - close) / syminfo.pointvalue)
+        if  (close - limitPrice) / (stopPrice - close) >= 0.25
+            strategy.entry("Short", strategy.short, qty = qty)
+            strategy.exit("Exit Short", "Short", limit = limitPrice, stop = stopPrice + syminfo.mintick)
+if session.islastbar or (not inETH and strategy.position_size != 0)
+    // ETH时段结束或收盘前强制平仓
+    strategy.cancel_all()
+    strategy.close_all(immediately = true)
