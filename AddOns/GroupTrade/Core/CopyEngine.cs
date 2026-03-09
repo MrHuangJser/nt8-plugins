@@ -360,6 +360,16 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 return;
             }
 
+            // 防重复（Order引用级别）：订单修改后 OrderId 可能变化，
+            // 但 Order 对象引用不变，通过引用匹配防止重复复制
+            if (_orderTracker.HasMappingByOrderRef(leaderOrder))
+            {
+                // OrderId 已变化但是同一个订单对象，更新映射键
+                _orderTracker.UpdateMasterOrderId(leaderOrder, leaderOrder.OrderId);
+                Log(GtLogLevel.Info, "DEBUG", $"订单引用已存在（OrderId已变更），已更新映射键: {leaderOrder.OrderId}");
+                return;
+            }
+
             Log(GtLogLevel.Info, "COPY", $"检测到主账户新订单: {leaderOrder.OrderAction} {leaderOrder.Quantity} {leaderOrder.Instrument.FullName}");
 
             int enabledCount = _config.EnabledFollowerCount;
@@ -414,6 +424,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                     {
                         MasterOrderId = leaderOrder.OrderId,
                         MasterOrderName = leaderOrder.Name,
+                        MasterOrder = leaderOrder,
                         FollowerOrderId = copyOrder.OrderId,
                         FollowerAccountName = followerAccount.Name,
                         FollowerAccount = followerAccount,
@@ -454,6 +465,15 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 return;
 
             var mappings = _orderTracker.GetFollowerMappings(leaderOrder.OrderId);
+
+            // 通过 Order 引用兜底查找
+            if (mappings.Count == 0)
+            {
+                mappings = _orderTracker.GetFollowerMappingsByOrderRef(leaderOrder);
+                if (mappings.Count > 0)
+                    _orderTracker.UpdateMasterOrderId(leaderOrder, leaderOrder.OrderId);
+            }
+
             if (mappings.Count == 0)
                 return;
 
@@ -495,7 +515,20 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
             // 尝试通过 OrderId 查找映射
             var mappings = _orderTracker.GetFollowerMappings(leaderOrder.OrderId);
 
-            // 如果找不到，输出当前所有映射用于调试
+            // 如果通过 OrderId 找不到，尝试通过 Order 对象引用查找
+            // （OrderId 可能在修改过程中已变更）
+            if (mappings.Count == 0)
+            {
+                mappings = _orderTracker.GetFollowerMappingsByOrderRef(leaderOrder);
+                if (mappings.Count > 0)
+                {
+                    // 找到了，同步更新映射键
+                    _orderTracker.UpdateMasterOrderId(leaderOrder, leaderOrder.OrderId);
+                    Log(GtLogLevel.Info, "DEBUG", $"通过 Order 引用找到映射，已更新键: {leaderOrder.OrderId}");
+                }
+            }
+
+            // 如果仍找不到，输出当前所有映射用于调试
             if (mappings.Count == 0)
             {
                 Log(GtLogLevel.Warning, "DEBUG", $"找不到 OrderId={leaderOrder.OrderId} 的映射，检查所有活跃映射...");
@@ -520,16 +553,18 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
                 try
                 {
                     // 刷新订单引用：从账户的 Orders 集合获取最新订单对象
-                    // 注意：订单提交后 OrderId 会变化，但 Name 是稳定的（格式为 [GT]{主订单ID}）
+                    // 注意：从订单的 Name 格式为 [GT]{创建时的主订单ID}，主订单ID可能已变更
                     Order freshOrder = null;
                     string expectedName = $"{COPY_TAG}{leaderOrder.OrderId}";
-                    Log(GtLogLevel.Info, "DEBUG", $"在 {mapping.FollowerAccountName} 中查找订单 Name={expectedName}...");
+                    // 也尝试用映射中记录的原始 MasterOrderId（从订单创建时的ID）
+                    string originalName = $"{COPY_TAG}{mapping.MasterOrderId}";
+                    Log(GtLogLevel.Info, "DEBUG", $"在 {mapping.FollowerAccountName} 中查找订单 Name={expectedName} 或 {originalName}...");
 
                     foreach (var order in mapping.FollowerAccount.Orders)
                     {
                         Log(GtLogLevel.Info, "DEBUG", $"  账户订单: Id={order.OrderId}, Name={order.Name}, State={order.OrderState}");
-                        // 通过 Name 匹配（Name 包含 [GT] 前缀和主订单ID，是稳定的标识符）
-                        if (order.Name == expectedName)
+                        // 通过 Name 匹配：优先用当前ID，兜底用原始ID
+                        if (order.Name == expectedName || order.Name == originalName)
                         {
                             freshOrder = order;
                             break;

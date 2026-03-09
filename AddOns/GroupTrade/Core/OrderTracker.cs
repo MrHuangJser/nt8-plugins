@@ -256,6 +256,89 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Core
         }
 
         /// <summary>
+        /// 通过 Order 对象引用查找映射（OrderId 变更后仍可追踪）
+        /// </summary>
+        public bool HasMappingByOrderRef(Order masterOrder)
+        {
+            if (masterOrder == null)
+                return false;
+
+            lock (_syncLock)
+            {
+                foreach (var kvp in _masterToFollowers)
+                {
+                    foreach (var mapping in kvp.Value)
+                    {
+                        if (ReferenceEquals(mapping.MasterOrder, masterOrder))
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 通过 Order 对象引用获取从订单映射
+        /// </summary>
+        public List<OrderMapping> GetFollowerMappingsByOrderRef(Order masterOrder)
+        {
+            if (masterOrder == null)
+                return new List<OrderMapping>();
+
+            lock (_syncLock)
+            {
+                foreach (var kvp in _masterToFollowers)
+                {
+                    foreach (var mapping in kvp.Value)
+                    {
+                        if (ReferenceEquals(mapping.MasterOrder, masterOrder))
+                            return new List<OrderMapping>(kvp.Value);
+                    }
+                }
+            }
+            return new List<OrderMapping>();
+        }
+
+        /// <summary>
+        /// 当主订单 OrderId 变更时，更新映射的键
+        /// </summary>
+        public void UpdateMasterOrderId(Order masterOrder, string newOrderId)
+        {
+            if (masterOrder == null || string.IsNullOrEmpty(newOrderId))
+                return;
+
+            lock (_syncLock)
+            {
+                string oldKey = null;
+                foreach (var kvp in _masterToFollowers)
+                {
+                    foreach (var mapping in kvp.Value)
+                    {
+                        if (ReferenceEquals(mapping.MasterOrder, masterOrder))
+                        {
+                            oldKey = kvp.Key;
+                            break;
+                        }
+                    }
+                    if (oldKey != null) break;
+                }
+
+                if (oldKey != null && oldKey != newOrderId)
+                {
+                    if (_masterToFollowers.TryRemove(oldKey, out var list))
+                    {
+                        // 更新映射中的 MasterOrderId
+                        foreach (var mapping in list)
+                        {
+                            mapping.MasterOrderId = newOrderId;
+                        }
+                        _masterToFollowers[newOrderId] = list;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// 检查是否为从订单（复制订单）
         /// </summary>
         public bool IsFollowerOrder(string orderId)

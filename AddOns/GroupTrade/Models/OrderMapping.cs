@@ -19,6 +19,11 @@ namespace NinjaTrader.NinjaScript.AddOns.GroupTrade.Models
         public string MasterOrderName { get; set; }
 
         /// <summary>
+        /// 主账户订单对象引用（用于跨 OrderId 变更的稳定追踪）
+        /// </summary>
+        public Order MasterOrder { get; set; }
+
+        /// <summary>
         /// 从账户订单 ID
         /// </summary>
         public string FollowerOrderId { get; set; }
