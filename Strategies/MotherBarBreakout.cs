@@ -58,10 +58,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private double _stopFillPrice;
 		private bool   _addOnFilled;
 
-		// 延迟操作标记（避免在OnPositionUpdate/OnExecutionUpdate中直接操作订单）
-		private bool   _pendingCancelAddOn;
-		private bool   _pendingFlatCleanup;
-
 		#endregion
 
 		protected override void OnStateChange()
@@ -129,9 +125,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 				HandleOutOfSession();
 				return;
 			}
-
-			// 处理延迟操作
-			ProcessDeferredActions();
 
 			// 状态驱动逻辑
 			switch (_state)
@@ -410,53 +403,31 @@ namespace NinjaTrader.NinjaScript.Strategies
 				Print(string.Format("[{0}] Bar#{1} | MB#{2} 止盈成交 | Entry={3} @ {4:F2}",
 					time, CurrentBar, _mbId, fromEntry, price));
 
-				// 主入场止盈且加仓未成交 → 标记取消加仓单
+				// 主入场止盈且加仓未成交 → 立即取消加仓单（OnExecutionUpdate中可安全调用CancelOrder）
 				if ((fromEntry == "MB_BO_Long" || fromEntry == "MB_BO_Short") && !_addOnFilled)
-					_pendingCancelAddOn = true;
-
-				// OnPositionUpdate(Flat) 会处理最终清理 → Idle
+					CancelAddOnOrder();
 			}
 			else if (name == "Stop loss")
 			{
 				Print(string.Format("[{0}] Bar#{1} | MB#{2} 止损成交 | Entry={3} @ {4:F2}",
 					time, CurrentBar, _mbId, fromEntry, price));
-				// OnPositionUpdate(Flat) 会处理 → Idle
+
+				// 主入场止损且加仓未成交 → 立即取消加仓单
+				if ((fromEntry == "MB_BO_Long" || fromEntry == "MB_BO_Short") && !_addOnFilled)
+					CancelAddOnOrder();
 			}
 		}
 
 		protected override void OnPositionUpdate(Position position, double averagePrice,
 			int quantity, MarketPosition marketPosition)
 		{
-			// 注意：OnPositionUpdate 中禁止调用 CancelOrder 等订单操作，一律通过标记位延迟到 OnBarUpdate 执行
-
 			if (marketPosition == MarketPosition.Flat && _state == MBBOState.EntryFilled)
 			{
 				Print(string.Format("[{0}] Bar#{1} | MB#{2} 全部平仓完成",
 					Time[0], CurrentBar, _mbId));
 
-				_pendingFlatCleanup = true;
-			}
-		}
-
-		#endregion
-
-		#region Deferred Actions
-
-		private void ProcessDeferredActions()
-		{
-			// 最高优先级：全部平仓后的清理（来自 OnPositionUpdate(Flat)）
-			if (_pendingFlatCleanup)
-			{
-				_pendingFlatCleanup = false;
-				CancelAddOnOrder();
+				// 加仓单已在OnExecutionUpdate中取消，此处仅重置状态
 				TransitionToIdle("全部平仓");
-				return;
-			}
-
-			if (_pendingCancelAddOn)
-			{
-				CancelAddOnOrder();
-				_pendingCancelAddOn = false;
 			}
 		}
 
@@ -577,8 +548,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 			_addOnOrder     = null;
 			_stopFillPrice      = 0;
 			_addOnFilled        = false;
-			_pendingCancelAddOn = false;
-			_pendingFlatCleanup = false;
 		}
 
 		#endregion
