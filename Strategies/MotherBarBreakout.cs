@@ -81,9 +81,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 				StrategyDirection			= MBBODirection.Both;
 
 				// 时段配置
-				TradeStartTime				= 210000;
-				TradeEndTime				= 060000;
-				UtcOffsetHours				= -5;
+				TradeStartTime				= 063000;
+				TradeEndTime				= 210000;
+				UtcOffsetHours				= 8;
 
 				// 止盈配置
 				LongTPPct					= 1.618;
@@ -91,20 +91,20 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 				// 加仓配置
 				EnableAddOn					= true;
-				LongAddOnPct				= 0.79;
-				ShortAddOnPct				= 0.21;
+				LongAddOnPct				= 0.725;
+				ShortAddOnPct				= 0.27;
 
 				// 加仓2配置（保本目标）
-				EnableAddOn2				= false;
-				LongAddOn2Pct				= 0.21;
-				ShortAddOn2Pct				= 0.79;
+				EnableAddOn2				= true;
+				LongAddOn2Pct				= 0.27;
+				ShortAddOn2Pct				= 0.725;
 
 				// 回测配置
 				EnableBacktest				= true;
 
 				// 可视化
 				ShowMBLines					= true;
-				MBLineLength				= 20;
+				MBLineLength				= 200;
 				BullColor					= Brushes.Green;
 				BearColor					= Brushes.Red;
 				NeutralColor				= Brushes.Gray;
