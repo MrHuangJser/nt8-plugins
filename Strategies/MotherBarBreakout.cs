@@ -104,7 +104,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 				// 可视化
 				ShowMBLines					= true;
-				MBLineLength				= 200;
+				MBLineLength				= 100;
 				BullColor					= Brushes.Green;
 				BearColor					= Brushes.Red;
 				NeutralColor				= Brushes.Gray;
