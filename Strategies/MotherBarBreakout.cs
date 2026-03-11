@@ -53,10 +53,12 @@ namespace NinjaTrader.NinjaScript.Strategies
 		// 订单引用
 		private Order _stopOrder;
 		private Order _addOnOrder;
+		private Order _addOn2Order;
 
 		// 成交状态
 		private double _stopFillPrice;
-		private bool   _addOnFilled;
+		private bool   _addOn1Filled;
+		private bool   _addOn2Filled;
 
 		#endregion
 
@@ -67,7 +69,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				Description					= @"MotherBar突破确认策略 - 基于Confirmation Signal #1的Stop+Limit双腿入场";
 				Name						= "MotherBarBreakout";
 				Calculate					= Calculate.OnBarClose;
-				EntriesPerDirection			= 2;
+				EntriesPerDirection			= 3;
 				EntryHandling				= EntryHandling.UniqueEntries;
 				IsExitOnSessionCloseStrategy = false;
 				IsFillLimitOnTouch			= false;
@@ -91,6 +93,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 				EnableAddOn					= true;
 				LongAddOnPct				= 0.79;
 				ShortAddOnPct				= 0.21;
+
+				// 加仓2配置（保本目标）
+				EnableAddOn2				= false;
+				LongAddOn2Pct				= 0.21;
+				ShortAddOn2Pct				= 0.79;
 
 				// 回测配置
 				EnableBacktest				= true;
@@ -333,6 +340,62 @@ namespace NinjaTrader.NinjaScript.Strategies
 			}
 		}
 
+		private void PlaceAddOn2Order()
+		{
+			if (!EnableAddOn2)
+				return;
+
+			if (_direction == "Long")
+			{
+				double addOn1Price = RoundToTick(CalcLevel(LongAddOnPct));
+				double addOn2Price = RoundToTick(CalcLevel(LongAddOn2Pct));
+				double slPrice     = RoundToTick(CalcLevel(-0.23));
+				double estBE       = RoundToTick((_stopFillPrice + addOn1Price + addOn2Price) / 3.0);
+
+				Print(string.Format("[{0}] Bar#{1} | MB#{2} 挂多头加仓2 Limit Buy @ {3:F2} ({4}%) | SL={5:F2} estBE={6:F2}",
+					Time[0], CurrentBar, _mbId, addOn2Price, LongAddOn2Pct * 100, slPrice, estBE));
+
+				SetStopLoss("MB_BO_Long_AddOn2", CalculationMode.Price, slPrice, false);
+				SetProfitTarget("MB_BO_Long_AddOn2", CalculationMode.Price, estBE);
+				_addOn2Order = EnterLongLimit(0, true, 1, addOn2Price, "MB_BO_Long_AddOn2");
+			}
+			else
+			{
+				double addOn1Price = RoundToTick(CalcLevel(ShortAddOnPct));
+				double addOn2Price = RoundToTick(CalcLevel(ShortAddOn2Pct));
+				double slPrice     = RoundToTick(CalcLevel(1.23));
+				double estBE       = RoundToTick((_stopFillPrice + addOn1Price + addOn2Price) / 3.0);
+
+				Print(string.Format("[{0}] Bar#{1} | MB#{2} 挂空头加仓2 Limit Sell @ {3:F2} ({4}%) | SL={5:F2} estBE={6:F2}",
+					Time[0], CurrentBar, _mbId, addOn2Price, ShortAddOn2Pct * 100, slPrice, estBE));
+
+				SetStopLoss("MB_BO_Short_AddOn2", CalculationMode.Price, slPrice, false);
+				SetProfitTarget("MB_BO_Short_AddOn2", CalculationMode.Price, estBE);
+				_addOn2Order = EnterShortLimit(0, true, 1, addOn2Price, "MB_BO_Short_AddOn2");
+			}
+		}
+
+		private void UpdateAllTPsToBreakEven()
+		{
+			double bePrice = RoundToTick(Position.AveragePrice);
+
+			Print(string.Format("[{0}] Bar#{1} | MB#{2} *** 保本模式 *** | BE={3:F2} (Position.AveragePrice)",
+				Time[0], CurrentBar, _mbId, bePrice));
+
+			if (_direction == "Long")
+			{
+				SetProfitTarget("MB_BO_Long", CalculationMode.Price, bePrice);
+				SetProfitTarget("MB_BO_Long_AddOn", CalculationMode.Price, bePrice);
+				SetProfitTarget("MB_BO_Long_AddOn2", CalculationMode.Price, bePrice);
+			}
+			else
+			{
+				SetProfitTarget("MB_BO_Short", CalculationMode.Price, bePrice);
+				SetProfitTarget("MB_BO_Short_AddOn", CalculationMode.Price, bePrice);
+				SetProfitTarget("MB_BO_Short_AddOn2", CalculationMode.Price, bePrice);
+			}
+		}
+
 		#endregion
 
 		#region Order & Execution Events
@@ -345,14 +408,17 @@ namespace NinjaTrader.NinjaScript.Strategies
 				_stopOrder = order;
 			else if (order.Name == "MB_BO_Long_AddOn" || order.Name == "MB_BO_Short_AddOn")
 				_addOnOrder = order;
+			else if (order.Name == "MB_BO_Long_AddOn2" || order.Name == "MB_BO_Short_AddOn2")
+				_addOn2Order = order;
 
 			if (orderState == OrderState.Cancelled || orderState == OrderState.Rejected)
 			{
 				Print(string.Format("[{0}] 订单 {1} {2} | 名称={3} | error={4}",
 					time, orderState, comment, order.Name, error));
 
-				if (order == _stopOrder)  _stopOrder = null;
-				if (order == _addOnOrder) _addOnOrder = null;
+				if (order == _stopOrder)   _stopOrder = null;
+				if (order == _addOnOrder)  _addOnOrder = null;
+				if (order == _addOn2Order) _addOn2Order = null;
 			}
 		}
 
@@ -379,19 +445,35 @@ namespace NinjaTrader.NinjaScript.Strategies
 						time, CurrentBar, _mbId, price, _direction));
 
 					PlaceAddOnOrder();
+					PlaceAddOn2Order();
 				}
 				return;
 			}
 
-			// 加仓成交
+			// 加仓1成交
 			if (name == "MB_BO_Long_AddOn" || name == "MB_BO_Short_AddOn")
 			{
 				if (execution.Order.OrderState == OrderState.Filled)
 				{
-					_addOnFilled = true;
+					_addOn1Filled = true;
 
-					Print(string.Format("[{0}] Bar#{1} | MB#{2} 加仓成交 @ {3:F2}",
+					Print(string.Format("[{0}] Bar#{1} | MB#{2} 加仓1成交 @ {3:F2}",
 						time, CurrentBar, _mbId, price));
+				}
+				return;
+			}
+
+			// 加仓2成交
+			if (name == "MB_BO_Long_AddOn2" || name == "MB_BO_Short_AddOn2")
+			{
+				if (execution.Order.OrderState == OrderState.Filled)
+				{
+					_addOn2Filled = true;
+
+					Print(string.Format("[{0}] Bar#{1} | MB#{2} 加仓2成交 @ {3:F2}",
+						time, CurrentBar, _mbId, price));
+
+					UpdateAllTPsToBreakEven();
 				}
 				return;
 			}
@@ -403,18 +485,30 @@ namespace NinjaTrader.NinjaScript.Strategies
 				Print(string.Format("[{0}] Bar#{1} | MB#{2} 止盈成交 | Entry={3} @ {4:F2}",
 					time, CurrentBar, _mbId, fromEntry, price));
 
-				// 主入场止盈且加仓未成交 → 立即取消加仓单（OnExecutionUpdate中可安全调用CancelOrder）
-				if ((fromEntry == "MB_BO_Long" || fromEntry == "MB_BO_Short") && !_addOnFilled)
+				// 主入场止盈且加仓1未成交 → 取消加仓1和加仓2
+				if ((fromEntry == "MB_BO_Long" || fromEntry == "MB_BO_Short") && !_addOn1Filled)
+				{
 					CancelAddOnOrder();
+					CancelAddOn2Order();
+				}
+				// 加仓1止盈且加仓2未成交 → 取消加仓2
+				if ((fromEntry == "MB_BO_Long_AddOn" || fromEntry == "MB_BO_Short_AddOn") && !_addOn2Filled)
+					CancelAddOn2Order();
 			}
 			else if (name == "Stop loss")
 			{
 				Print(string.Format("[{0}] Bar#{1} | MB#{2} 止损成交 | Entry={3} @ {4:F2}",
 					time, CurrentBar, _mbId, fromEntry, price));
 
-				// 主入场止损且加仓未成交 → 立即取消加仓单
-				if ((fromEntry == "MB_BO_Long" || fromEntry == "MB_BO_Short") && !_addOnFilled)
+				// 主入场止损且加仓1未成交 → 取消加仓1和加仓2
+				if ((fromEntry == "MB_BO_Long" || fromEntry == "MB_BO_Short") && !_addOn1Filled)
+				{
 					CancelAddOnOrder();
+					CancelAddOn2Order();
+				}
+				// 加仓1止损且加仓2未成交 → 取消加仓2
+				if ((fromEntry == "MB_BO_Long_AddOn" || fromEntry == "MB_BO_Short_AddOn") && !_addOn2Filled)
+					CancelAddOn2Order();
 			}
 		}
 
@@ -510,11 +604,13 @@ namespace NinjaTrader.NinjaScript.Strategies
 				{
 					ExitLong("SessionClose", "MB_BO_Long");
 					ExitLong("SessionClose", "MB_BO_Long_AddOn");
+					ExitLong("SessionClose", "MB_BO_Long_AddOn2");
 				}
 				else
 				{
 					ExitShort("SessionClose", "MB_BO_Short");
 					ExitShort("SessionClose", "MB_BO_Short_AddOn");
+					ExitShort("SessionClose", "MB_BO_Short_AddOn2");
 				}
 			}
 
@@ -544,10 +640,12 @@ namespace NinjaTrader.NinjaScript.Strategies
 			_direction      = null;
 			_confirmBarHigh = 0;
 			_confirmBarLow  = 0;
-			_stopOrder      = null;
-			_addOnOrder     = null;
-			_stopFillPrice      = 0;
-			_addOnFilled        = false;
+			_stopOrder       = null;
+			_addOnOrder      = null;
+			_addOn2Order     = null;
+			_stopFillPrice   = 0;
+			_addOn1Filled    = false;
+			_addOn2Filled    = false;
 		}
 
 		#endregion
@@ -573,15 +671,28 @@ namespace NinjaTrader.NinjaScript.Strategies
 			{
 				string name = _addOnOrder.Name;
 				CancelOrder(_addOnOrder);
-				Print(string.Format("[{0}] Bar#{1} | 取消加仓单 {2}", Time[0], CurrentBar, name));
+				Print(string.Format("[{0}] Bar#{1} | 取消加仓1单 {2}", Time[0], CurrentBar, name));
 			}
 			_addOnOrder = null;
+		}
+
+		private void CancelAddOn2Order()
+		{
+			if (_addOn2Order != null && (_addOn2Order.OrderState == OrderState.Working
+				|| _addOn2Order.OrderState == OrderState.Accepted))
+			{
+				string name = _addOn2Order.Name;
+				CancelOrder(_addOn2Order);
+				Print(string.Format("[{0}] Bar#{1} | 取消加仓2单 {2}", Time[0], CurrentBar, name));
+			}
+			_addOn2Order = null;
 		}
 
 		private void CancelAllOrders()
 		{
 			CancelStopOrder();
 			CancelAddOnOrder();
+			CancelAddOn2Order();
 		}
 
 		#endregion
@@ -714,6 +825,18 @@ namespace NinjaTrader.NinjaScript.Strategies
 		[NinjaScriptProperty]
 		[Display(Name = "空头加仓位", Description = "空头加仓百分比(默认0.21=21%)", Order = 3, GroupName = "加仓配置")]
 		public double ShortAddOnPct { get; set; }
+
+		[NinjaScriptProperty]
+		[Display(Name = "启用加仓2", Description = "是否启用第二加仓(保本目标)", Order = 4, GroupName = "加仓配置")]
+		public bool EnableAddOn2 { get; set; }
+
+		[NinjaScriptProperty]
+		[Display(Name = "多头加仓2位", Description = "多头加仓2百分比(默认0.21=21%)", Order = 5, GroupName = "加仓配置")]
+		public double LongAddOn2Pct { get; set; }
+
+		[NinjaScriptProperty]
+		[Display(Name = "空头加仓2位", Description = "空头加仓2百分比(默认0.79=79%)", Order = 6, GroupName = "加仓配置")]
+		public double ShortAddOn2Pct { get; set; }
 
 		[NinjaScriptProperty]
 		[Display(Name = "启用回测", Description = "是否在历史数据上执行策略", Order = 1, GroupName = "回测配置")]
