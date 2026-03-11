@@ -76,6 +76,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				TraceOrders					= true;
 				BarsRequiredToTrade			= 3;
 				IsInstantiatedOnEachOptimizationIteration = true;
+				RealtimeErrorHandling		= RealtimeErrorHandling.IgnoreAllErrors;
 
 				// 策略配置
 				StrategyDirection			= MBBODirection.Both;
@@ -292,7 +293,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 					Time[0], CurrentBar, _mbId, stopPrice, slPrice));
 
 				SetStopLoss("MB_BO_Long", CalculationMode.Price, slPrice, false);
-				SetProfitTarget("MB_BO_Long", CalculationMode.Price, RoundToTick(CalcLevel(LongTPPct)));
+				SetProfitTarget("MB_BO_Long", CalculationMode.Price, FloorToTick(CalcLevel(LongTPPct)));
 				_stopOrder = EnterLongStopMarket(0, true, 1, stopPrice, "MB_BO_Long");
 			}
 			else
@@ -304,7 +305,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 					Time[0], CurrentBar, _mbId, stopPrice, slPrice));
 
 				SetStopLoss("MB_BO_Short", CalculationMode.Price, slPrice, false);
-				SetProfitTarget("MB_BO_Short", CalculationMode.Price, RoundToTick(CalcLevel(ShortTPPct)));
+				SetProfitTarget("MB_BO_Short", CalculationMode.Price, CeilToTick(CalcLevel(ShortTPPct)));
 				_stopOrder = EnterShortStopMarket(0, true, 1, stopPrice, "MB_BO_Short");
 			}
 		}
@@ -323,7 +324,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 					Time[0], CurrentBar, _mbId, addOnPrice, slPrice));
 
 				SetStopLoss("MB_BO_Long_AddOn", CalculationMode.Price, slPrice, false);
-				SetProfitTarget("MB_BO_Long_AddOn", CalculationMode.Price, RoundToTick(CalcLevel(LongTPPct)));
+				SetProfitTarget("MB_BO_Long_AddOn", CalculationMode.Price, FloorToTick(CalcLevel(LongTPPct)));
 				_addOnOrder = EnterLongLimit(0, true, 1, addOnPrice, "MB_BO_Long_AddOn");
 			}
 			else
@@ -335,7 +336,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 					Time[0], CurrentBar, _mbId, addOnPrice, slPrice));
 
 				SetStopLoss("MB_BO_Short_AddOn", CalculationMode.Price, slPrice, false);
-				SetProfitTarget("MB_BO_Short_AddOn", CalculationMode.Price, RoundToTick(CalcLevel(ShortTPPct)));
+				SetProfitTarget("MB_BO_Short_AddOn", CalculationMode.Price, CeilToTick(CalcLevel(ShortTPPct)));
 				_addOnOrder = EnterShortLimit(0, true, 1, addOnPrice, "MB_BO_Short_AddOn");
 			}
 		}
@@ -411,10 +412,29 @@ namespace NinjaTrader.NinjaScript.Strategies
 			else if (order.Name == "MB_BO_Long_AddOn2" || order.Name == "MB_BO_Short_AddOn2")
 				_addOn2Order = order;
 
-			if (orderState == OrderState.Cancelled || orderState == OrderState.Rejected)
+			if (orderState == OrderState.Rejected)
 			{
-				Print(string.Format("[{0}] 订单 {1} {2} | 名称={3} | error={4}",
-					time, orderState, comment, order.Name, error));
+				Print(string.Format("[{0}] 订单被拒绝 | 名称={1} | comment={2} | error={3}",
+					time, order.Name, comment, error));
+
+				if (order == _stopOrder && _state == MBBOState.StopPending)
+				{
+					// Stop单被拒绝：废弃当前MB，回到Idle等待下一个MB
+					_stopOrder = null;
+					TransitionToIdle("Stop单被拒绝");
+				}
+				else
+				{
+					// 非预期的拒绝：平仓并终止策略
+					FatalError(string.Format("非预期订单拒绝: {0}", order.Name));
+				}
+				return;
+			}
+
+			if (orderState == OrderState.Cancelled)
+			{
+				Print(string.Format("[{0}] 订单取消 | 名称={1} | comment={2} | error={3}",
+					time, order.Name, comment, error));
 
 				if (order == _stopOrder)   _stopOrder = null;
 				if (order == _addOnOrder)  _addOnOrder = null;
@@ -623,6 +643,29 @@ namespace NinjaTrader.NinjaScript.Strategies
 			}
 		}
 
+		private void FatalError(string reason)
+		{
+			Print(string.Format("[{0}] *** 策略因异常终止 *** | 原因: {1}", Time[0], reason));
+
+			CancelAllOrders();
+
+			if (Position.MarketPosition == MarketPosition.Long)
+			{
+				ExitLong("ErrorClose", "MB_BO_Long");
+				ExitLong("ErrorClose", "MB_BO_Long_AddOn");
+				ExitLong("ErrorClose", "MB_BO_Long_AddOn2");
+			}
+			else if (Position.MarketPosition == MarketPosition.Short)
+			{
+				ExitShort("ErrorClose", "MB_BO_Short");
+				ExitShort("ErrorClose", "MB_BO_Short_AddOn");
+				ExitShort("ErrorClose", "MB_BO_Short_AddOn2");
+			}
+
+			ResetAll();
+			CloseStrategy(reason);
+		}
+
 		private void TransitionToIdle(string reason)
 		{
 			Print(string.Format("[{0}] Bar#{1} | MB#{2} → Idle | 原因: {3}",
@@ -707,6 +750,16 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private double RoundToTick(double price)
 		{
 			return Instrument.MasterInstrument.RoundToTickSize(price);
+		}
+
+		private double FloorToTick(double price)
+		{
+			return Math.Floor(price / TickSize) * TickSize;
+		}
+
+		private double CeilToTick(double price)
+		{
+			return Math.Ceiling(price / TickSize) * TickSize;
 		}
 
 		private bool IsInTradeSession()
