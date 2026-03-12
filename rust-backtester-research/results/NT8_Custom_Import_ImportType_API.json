@@ -1,0 +1,47 @@
+{
+  "basic_info": {
+    "name": "NT8 Custom Import (ImportType API)",
+    "category": "result_analysis",
+    "description": "通过 NT8 AddOn 开发框架实现自定义 ImportType 接口，将外部交易记录和历史数据导入 NT8 进行分析。可开发自定义数据导入器，解析任意格式的外部数据文件，导入为 NT8 可识别的历史数据。结合 Trade Performance 面板可实现外部回测结果在 NT8 中的可视化分析。"
+  },
+  "feasibility": {
+    "feasibility": "中高",
+    "complexity": "中",
+    "nt8_api_support": "NT8 API 原生支持。ImportType 是 NinjaScript 的标准接口类型，有官方文档（Language Reference > Import Type）。默认的 TextImportType 源码可在 NinjaScript Editor 的 ImportTypes 文件夹中查看作为参考。",
+    "limitations": "导入数据后不会自动更新已有图表或运行中的策略，需要手动重新加载历史数据或重启策略；ImportType 一次只能导入一种数据类型（如 Last、Bid、Ask 分别导入）；导入的是历史行情数据而非交易记录，若要导入外部交易记录用于 Trade Performance 分析需要额外方案；AddOn 开发需要 C# 编程能力和对 NT8 NinjaScript 框架的理解。"
+  },
+  "performance": {
+    "multi_thread_support": "由 NT8 平台管理，ImportType 接口本身为单线程执行",
+    "parallelism_model": "不适用（数据导入工具，非回测引擎）",
+    "latency": "不适用",
+    "throughput": "取决于数据文件大小和解析复杂度。对于标准文本格式（CSV），NT8 内置的 TextImportType 效率足够。大量 tick 数据导入可能较慢。",
+    "memory_footprint": "由 NT8 平台管理。大量数据导入时可能临时占用较多内存。",
+    "backtest_speed_benchmark": "不适用（非回测引擎）"
+  },
+  "data_quality": {
+    "data_granularity": "支持 tick 级别。可导入 Last、Bid、Ask 等不同类型的历史数据，粒度取决于源数据。",
+    "data_fidelity": "取决于源数据和自定义 ImportType 的实现。可导入价格、成交量等基本数据。通过自定义实现可支持更丰富的数据维度。"
+  },
+  "integration": {
+    "integration_method": "直接在 NT8 内部实现集成：1) 参考 NinjaScript Editor 中 ImportTypes 文件夹的默认 TextImportType 源码；2) 开发自定义 ImportType 类，实现数据解析逻辑；3) 在 AddOn 中通过 ImportTypes.TextImportType（或自定义类型）实例化并调用 Import() 方法；4) 可配合 FileSystemWatcher 监控文件夹实现自动导入；5) 导入后通过 Tools > Import > Historical Data 或编程方式触发。注意需要复制 ImportType 实例后修改，不要直接修改原始实例。",
+    "data_format": "默认支持文本/CSV 格式（TextImportType）。通过自定义 ImportType 可支持任意格式（JSON、二进制、Protobuf 等）。",
+    "bidirectional": "单向导入（外部数据 -> NT8）。但结合其他 NT8 功能可实现完整的数据流闭环。",
+    "serialization_overhead": "取决于自定义 ImportType 的实现。CSV 文本格式有一定的解析开销；自定义二进制格式可减少开销。NT8 内部数据存储使用高效的专有格式。"
+  },
+  "ecosystem": {
+    "dev_effort": "开发自定义 ImportType 约 1-2 人周（含学习 NinjaScript AddOn 框架和调试）",
+    "maintenance": "低维护难度。ImportType 接口相对稳定，但需关注 NT8 版本更新是否影响 API。",
+    "ecosystem_maturity": "中高。NT8 NinjaScript 框架成熟，有官方文档和源码参考。但 ImportType 相关的第三方资源和示例较少。",
+    "community_activity": "NinjaTrader 官方论坛有关于 ImportType 和 AddOn 开发的讨论，但相关帖子数量有限。官方技术支持可提供帮助。",
+    "python_binding": "不适用（C# 实现）",
+    "live_trading_support": "不适用（数据导入工具，非交易引擎）",
+    "nt8_version_compatibility": "兼容 NT8 各版本。ImportType 是 NinjaScript 标准接口，随 NT8 平台维护。需注意 NinjaTrader Desktop 新版本可能对 API 有微调。"
+  },
+  "architecture": {
+    "event_model": "不适用（非事件驱动引擎，为数据导入接口）",
+    "fault_tolerance": "基础级别。导入失败时 NT8 会给出错误提示。数据验证逻辑需要在自定义 ImportType 中自行实现。"
+  },
+  "uncertain": [
+    "nt8_version_compatibility"
+  ]
+}

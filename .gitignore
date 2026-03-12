@@ -20,3 +20,6 @@ Thumbs.db
 # Backup files
 *.bak
 *~
+
+# Rust
+target/

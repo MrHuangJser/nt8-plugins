@@ -1,0 +1,55 @@
+{
+  "basic_info": {
+    "name": "Qust",
+    "category": "backtest_engine",
+    "description": "Rust 回测和实盘交易库，提供灵活可扩展的策略构建方式。支持 K 线数据和 tick 数据的快速处理和存储，可在回测和实盘之间无缝切换。提供多种策略接口：基于 K 线/tick 数据返回目标仓位或订单动作。"
+  },
+  "feasibility": {
+    "feasibility": "中",
+    "complexity": "中",
+    "nt8_api_support": "NT8 API 不原生支持该方案。Qust 是独立 Rust 库，需要通过自定义数据管道与 NT8 集成。",
+    "limitations": "项目较新（2024年10月发布公告），社区规模很小；文档较少，主要依赖代码示例；生态不成熟，第三方集成有限；中文开发者背景，英文文档可能不够完善。"
+  },
+  "performance": {
+    "multi_thread_support": "[不确定] 作为 Rust 库理论上可利用多线程，但文档未明确说明内置多线程支持。",
+    "parallelism_model": "[不确定] 文档未详细描述并行化模型。用户可自行使用 Rust 并行库进行策略参数优化并行或多品种并行。",
+    "latency": "不适用（非通信方案）",
+    "throughput": "高。官方强调对 K 线数据和 tick 数据的快速处理和存储，Rust 原生性能保证。",
+    "memory_footprint": "[不确定] 未有具体数据，但 Rust 实现通常内存效率较高。",
+    "backtest_speed_benchmark": "[不确定] 无公开回测速度基准数据。"
+  },
+  "data_quality": {
+    "data_granularity": "tick 级别。支持 K 线数据和 tick 数据两种粒度。",
+    "data_fidelity": "[不确定] 文档未详细说明是否支持 bid/ask、订单簿深度等高保真数据。已知支持 K 线和 tick 数据流处理。"
+  },
+  "integration": {
+    "integration_method": "与 NT8 集成方式：1) 从 NT8 导出历史数据（K 线或 tick 数据）；2) 在 Qust 中加载数据并构建策略运行回测；3) 导出交易记录；4) 通过 NT8 Trade Performance 或自定义 ImportType 导入分析。",
+    "data_format": "[不确定] 文档未明确说明支持的数据交换格式，预计支持 CSV 等标准格式。",
+    "bidirectional": "不支持与 NT8 的双向通信",
+    "serialization_overhead": "[不确定] 无相关性能数据。"
+  },
+  "ecosystem": {
+    "dev_effort": "集成到 NT8 数据分析流程约 2-3 人周（含学习 API 和开发数据管道）",
+    "maintenance": "低维护难度。项目更新频率有限，API 相对稳定。不依赖 NT8 更新。",
+    "ecosystem_maturity": "低。项目较新，crates.io 上有发布（qust crate），文档有限，社区很小。",
+    "community_activity": "[不确定] GitHub 仓库 baiguoname/qust，项目较新（2024年10月发布），社区规模很小。具体 stars 数需实时查询。",
+    "python_binding": "不提供 Python 绑定",
+    "live_trading_support": "支持。同一策略代码可直接用于实盘交易，支持回测到实盘的无缝切换。",
+    "nt8_version_compatibility": "不适用，与 NT8 无直接关系"
+  },
+  "architecture": {
+    "event_model": "数据流驱动。支持多种策略接口模式：K 线流 -> 目标仓位、tick 数据流 -> 目标仓位、tick 数据流 -> 订单动作、K 线+tick 混合流 -> 仓位/动作、K 线流 -> 布尔信号。这种灵活的接口设计是其特色。",
+    "fault_tolerance": "[不确定] 文档未详细说明容错机制。"
+  },
+  "uncertain": [
+    "multi_thread_support",
+    "parallelism_model",
+    "memory_footprint",
+    "backtest_speed_benchmark",
+    "data_fidelity",
+    "data_format",
+    "serialization_overhead",
+    "community_activity",
+    "fault_tolerance"
+  ]
+}

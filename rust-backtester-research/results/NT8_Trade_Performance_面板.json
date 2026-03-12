@@ -1,0 +1,45 @@
+{
+  "basic_info": {
+    "name": "NT8 Trade Performance 面板",
+    "category": "result_analysis",
+    "description": "NinjaTrader 8 内置的策略分析工具，通过 Control Center 菜单 New > Trade Performance 访问。可生成详细的交易绩效报告，展示盈亏曲线（权益曲线）、胜率、最大回撤、净利润、毛利/毛亏、交易次数等关键指标。支持按日期范围筛选、自定义起始账户大小和手续费设置。"
+  },
+  "feasibility": {
+    "feasibility": "高",
+    "complexity": "低",
+    "nt8_api_support": "NT8 原生支持。Trade Performance 是 NT8 内置功能，有完整的官方文档。通过 NinjaScript 的 TradesPerformance 类可编程访问绩效数据。",
+    "limitations": "仅能分析 NT8 平台内的交易记录，无法直接导入外部交易数据进行分析；绩效显示面板的自定义程度有限；导入历史数据后不会自动更新图表和策略，需要手动重新加载；对于大量交易记录可能加载较慢。"
+  },
+  "performance": {
+    "multi_thread_support": "由 NT8 平台管理，用户无法控制多线程行为",
+    "parallelism_model": "不适用（非回测引擎，为结果分析工具）",
+    "latency": "不适用",
+    "throughput": "不适用（非数据处理引擎）",
+    "memory_footprint": "由 NT8 平台管理。分析大量交易记录时可能占用较多内存。",
+    "backtest_speed_benchmark": "不适用（非回测引擎）"
+  },
+  "data_quality": {
+    "data_granularity": "基于交易记录级别（每笔交易的入场/出场），非原始 tick 数据",
+    "data_fidelity": "高。包含每笔交易的完整信息：入场/出场时间、价格、数量、盈亏、手续费等。通过 Strategy Analyzer 回测时可获取完整的订单执行细节。"
+  },
+  "integration": {
+    "integration_method": "NT8 原生集成，无需额外开发。使用步骤：1) 在 Control Center 菜单中选择 New > Trade Performance；2) 选择账户或交易历史；3) 设置日期范围；4) 点击 Generate 生成报告。也可通过 Strategy Analyzer 回测后直接查看绩效结果。NinjaScript 中通过 TradesPerformance 类编程访问。",
+    "data_format": "NT8 内部格式，支持导出为报告。输入数据来自 NT8 内部交易记录。",
+    "bidirectional": "单向（仅分析展示，不回传数据到外部系统）",
+    "serialization_overhead": "无序列化开销，直接读取 NT8 内部数据"
+  },
+  "ecosystem": {
+    "dev_effort": "零开发工作量（开箱即用的内置功能）",
+    "maintenance": "零维护成本，随 NT8 平台更新自动维护",
+    "ecosystem_maturity": "高。NT8 官方内置功能，文档完善，用户群体大。",
+    "community_activity": "作为 NT8 内置功能，有大量社区讨论和教程。NinjaTrader 官方论坛有专门的技术支持板块。",
+    "python_binding": "不适用",
+    "live_trading_support": "不适用（分析工具，非交易引擎）。但可分析实盘和模拟盘的交易结果。",
+    "nt8_version_compatibility": "完全兼容所有 NT8 版本，包括 NinjaTrader Desktop 新版。作为内置功能随平台一起发布和更新。"
+  },
+  "architecture": {
+    "event_model": "不适用（非事件驱动引擎，为 UI 分析面板）",
+    "fault_tolerance": "由 NT8 平台管理。交易记录持久化存储在 NT8 数据库中。"
+  },
+  "uncertain": []
+}

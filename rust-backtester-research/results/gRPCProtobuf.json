@@ -1,0 +1,40 @@
+{
+  "name": "gRPC/Protobuf",
+  "category": "communication",
+  "description": "基于 gRPC 框架的跨进程 RPC 通信方案。使用 Protocol Buffers（Protobuf）定义强类型接口和消息格式，支持一元调用、服务端流、客户端流、双向流四种通信模式。Rust 端使用 tonic 库，C#/.NET 端使用 Grpc.Net.Client/Grpc.AspNetCore 官方库。适用于 NT8 与外部 Rust 回测引擎之间的结构化数据交换。",
+
+  "feasibility": "高——gRPC 和 Protobuf 是工业级成熟技术，Rust（tonic）和 C#（Grpc.Net）均有成熟库支持。",
+  "complexity": "中——需要定义 .proto 文件、配置代码生成、管理服务端/客户端生命周期。但强类型接口减少了运行时错误。",
+  "nt8_api_support": "不直接支持——NT8 NinjaScript 无内置 gRPC 支持。需通过 NT8 AddOn 方式引入 gRPC NuGet 包（Grpc.Net.Client），可能需要处理 .NET 版本兼容性（NT8 基于 .NET Framework 4.8，需使用 Grpc.Core 而非 Grpc.Net）。",
+  "limitations": "1. NT8 基于 .NET Framework 4.8，需使用较旧的 Grpc.Core 包（而非新的 Grpc.Net.Client，后者需要 .NET Core）；2. gRPC 依赖 HTTP/2，本地通信时协议开销相对 TCP/Named Pipes 更大；3. 需要管理额外的服务进程（Rust gRPC 服务器）；4. Protobuf 不支持直接传递 .NET 特有类型；5. 调试 gRPC 通信需要专门工具（如 grpcurl、Postman gRPC）；6. NT8 AddOn 引入大量 gRPC 依赖 DLL 可能导致加载冲突。",
+
+  "multi_thread_support": "支持——gRPC 服务端天然支持多线程并发处理请求。tonic（Rust）基于 Tokio 异步运行时，C# gRPC 基于 async/await。",
+  "parallelism_model": "异步并发——gRPC 基于异步模型，支持大量并发连接。Rust tonic 使用 Tokio 异步运行时；可结合 Rayon 进行 CPU 密集计算的并行化。双向流支持实时推送结果。",
+  "latency": "低——本地 gRPC 调用延迟约 0.1-1 毫秒（含 Protobuf 序列化）。比 FFI 高但对回测场景足够。网络传输时延迟取决于网络条件。",
+  "throughput": "高——Protobuf 二进制序列化高效，gRPC 支持流式传输避免大消息阻塞。单连接吞吐量可达每秒数万条消息。批量传输 tick 数据时建议使用流式 RPC。",
+  "memory_footprint": "中——gRPC 运行时有固定内存开销（约 10-50 MB）。Protobuf 消息序列化/反序列化会产生临时内存分配。流式传输可控制内存峰值。",
+  "backtest_speed_benchmark": "[不确定] gRPC 通信层本身不是瓶颈。参考：Protobuf 序列化速度约 1-2 GB/s，gRPC 单连接消息吞吐约 10k-50k msg/s。实际回测速度取决于引擎实现。",
+
+  "data_granularity": "支持任意粒度——Protobuf 消息可定义任意精度的数据结构。",
+  "data_fidelity": "高——Protobuf 支持定义精确的数据模型，可包含 bid/ask/last/volume 等所有字段。支持 oneof、repeated、map 等复杂类型。浮点精度由 double/float 类型保证。",
+
+  "integration_method": "1. 定义 .proto 文件（服务接口 + 消息类型）；2. Rust 端：使用 tonic-build 生成服务端代码，实现 Service trait，启动 gRPC 服务器；3. C#/NT8 端：使用 Grpc.Tools 生成客户端代码（需使用 Grpc.Core 包适配 .NET Framework 4.8），在 AddOn 中创建 gRPC Channel 并调用；4. 部署时需确保 Rust 服务进程先于 NT8 启动。",
+  "data_format": "Protocol Buffers（二进制序列化格式），强类型，向后兼容。也可通过 gRPC-JSON 转码支持 JSON 格式（调试用）。",
+  "bidirectional": "完全支持——gRPC 原生支持双向流（Bidirectional Streaming），NT8 可发送数据请求的同时接收实时回测结果。",
+  "serialization_overhead": "低——Protobuf 是高效的二进制格式，序列化速度约 1-2 GB/s，体积比 JSON 小 3-10 倍。反序列化也同样高效。相比 FFI 直接内存访问仍有开销。",
+
+  "dev_effort": "基础 gRPC 集成：3-5 人天；完整双向流通信 + 错误处理：1-2 人周；解决 NT8 .NET Framework 兼容性问题可能额外 1-2 人天。",
+  "maintenance": "中——.proto 文件变更需同时重新生成 Rust 和 C# 代码（但向后兼容）。Grpc.Core 包已进入维护模式，长期需关注迁移方案。",
+  "ecosystem_maturity": "高——gRPC 是 Google 开源的工业级框架，Protobuf 是事实标准序列化格式。tonic 是 Rust 生态最成熟的 gRPC 实现。",
+  "community_activity": "tonic: GitHub 10k+ stars，活跃维护。grpc-dotnet: 微软官方维护。protobuf: Google 维护，67k+ stars。生态极其活跃。",
+  "python_binding": "支持——gRPC 有官方 Python 支持（grpcio），可直接复用相同的 .proto 定义生成 Python 客户端。",
+  "live_trading_support": "支持——gRPC 低延迟适合实盘场景。双向流可用于实时数据推送和交易信号传递。需确保服务可用性和断线重连机制。",
+  "nt8_version_compatibility": "需注意——NT8 基于 .NET Framework 4.8，必须使用 Grpc.Core 包（非 Grpc.Net.Client）。未来 NinjaTrader Desktop 若迁移到 .NET 8+ 则可使用更新的库。",
+
+  "event_model": "异步回调式——gRPC 服务定义为异步方法，tonic 使用 async/await。流式 RPC 类似于异步迭代器模式，可自然映射到事件驱动架构。",
+  "fault_tolerance": "良好——gRPC 有标准错误码体系（Status Code），支持超时、重试策略、负载均衡。需要自行实现断线重连和消息持久化（gRPC 本身不保证消息持久化）。",
+
+  "uncertain": [
+    "backtest_speed_benchmark"
+  ]
+}

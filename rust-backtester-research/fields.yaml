@@ -1,0 +1,127 @@
+topic: "使用 Rust 构建高性能回测引擎，集成 NinjaTrader 8 数据源与分析面板"
+
+fields:
+  basic_info:
+    - name: name
+      description: "方案名称"
+      detail_level: 极简
+
+    - name: category
+      description: "所属类别：data_acquisition / backtest_engine / result_analysis / communication"
+      detail_level: 极简
+
+    - name: description
+      description: "方案简要描述，核心功能概述"
+      detail_level: 简要
+
+  feasibility:
+    - name: feasibility
+      description: "技术可行性（高/中/低），基于已有实践和文档支持"
+      detail_level: 简要
+
+    - name: complexity
+      description: "实现复杂度（高/中/低），考虑开发工作量和技术门槛"
+      detail_level: 简要
+
+    - name: nt8_api_support
+      description: "NT8 API 是否原生支持该方案，是否有官方文档"
+      detail_level: 简要
+
+    - name: limitations
+      description: "已知限制、坑点、社区反馈的常见问题"
+      detail_level: 详细
+
+  performance:
+    - name: multi_thread_support
+      description: "是否支持多线程以及并行化程度"
+      detail_level: 简要
+
+    - name: parallelism_model
+      description: "并行化模型：参数优化并行 / 多品种并行 / 单次回测内并行 / 异步 / SIMD"
+      detail_level: 详细
+
+    - name: latency
+      description: "通信延迟评估（仅通信方案适用）"
+      detail_level: 简要
+
+    - name: throughput
+      description: "数据吞吐能力，处理 tick 级数据的效率"
+      detail_level: 简要
+
+    - name: memory_footprint
+      description: "内存占用评估，处理大量tick数据时的内存效率"
+      detail_level: 简要
+
+    - name: backtest_speed_benchmark
+      description: "回测速度基准参考（如有公开数据）"
+      detail_level: 详细
+
+  data_quality:
+    - name: data_granularity
+      description: "支持的最小数据粒度：tick / 秒 / 分钟 / 日"
+      detail_level: 简要
+
+    - name: data_fidelity
+      description: "数据保真度：是否包含 bid/ask、订单簿深度、成交量分布等"
+      detail_level: 详细
+
+  integration:
+    - name: integration_method
+      description: "与 NT8 集成的具体方式和步骤"
+      detail_level: 详细
+
+    - name: data_format
+      description: "数据交换格式（CSV/JSON/Protobuf/Arrow/自定义二进制）"
+      detail_level: 简要
+
+    - name: bidirectional
+      description: "是否支持双向通信（数据获取 + 结果回传）"
+      detail_level: 简要
+
+    - name: serialization_overhead
+      description: "序列化/反序列化开销评估，不同格式的性能差异"
+      detail_level: 详细
+
+  ecosystem:
+    - name: dev_effort
+      description: "开发工作量估算（人天/人周级别）"
+      detail_level: 简要
+
+    - name: maintenance
+      description: "维护难度，是否需要跟随 NT8 更新"
+      detail_level: 简要
+
+    - name: ecosystem_maturity
+      description: "生态成熟度，文档完善度，社区活跃度"
+      detail_level: 简要
+
+    - name: community_activity
+      description: "GitHub stars、最近commit日期、issue响应速度"
+      detail_level: 详细
+
+    - name: python_binding
+      description: "是否提供 Python 绑定（回测引擎适用）"
+      detail_level: 简要
+
+    - name: live_trading_support
+      description: "是否支持从回测无缝切换到实盘（回测引擎适用）"
+      detail_level: 简要
+
+    - name: nt8_version_compatibility
+      description: "NT8版本兼容性，是否兼容NinjaTrader Desktop新版"
+      detail_level: 简要
+
+  architecture:
+    - name: event_model
+      description: "事件驱动模型类型：回调式 / Actor / ECS（回测引擎适用）"
+      detail_level: 详细
+
+    - name: fault_tolerance
+      description: "容错能力：断点续跑、数据缺失处理、异常订单处理"
+      detail_level: 简要
+
+uncertain:
+  - backtest_speed_benchmark  # 公开基准数据较少，deep阶段尽量搜集
+  - serialization_overhead     # 需要实际测试数据支撑
+  - community_activity         # 需要实时查询GitHub
+  - nt8_version_compatibility  # NinjaTrader Desktop较新，文档可能不全

@@ -1,0 +1,38 @@
+{
+  "name": "NT8 Market Replay 数据文件解析",
+  "category": "data_acquisition",
+  "description": "解析 NT8 独有的 Market Replay 二进制文件（.nrd 格式），这些文件存储在 Documents/NinjaTrader 8/db/replay 目录中，包含完整的 tick 级 bid/ask/last 数据和订单簿深度信息。可通过 NT8 内部 API（MarketReplay.DumpMarketData）或直接解析二进制文件获取数据。",
+
+  "feasibility": "中 - .nrd 文件格式为 NinjaTrader 专有格式，官方未公开文档；但社区已有逆向工程项目（nrdtocsv）成功解析；也可通过 NT8 AddOn 调用内部 API 导出",
+  "complexity": "中高 - 直接解析二进制文件需逆向工程，风险较高；通过 NT8 API 导出较简单但需依赖 NT8 运行",
+  "nt8_api_support": "部分支持 - MarketReplay.DumpMarketData() 和 MarketReplay.DumpMarketDepth() 方法存在但未正式文档化，属于未公开 API",
+  "limitations": "1. .nrd 二进制格式未公开文档化，依赖逆向工程，NT8 版本更新可能导致格式变化；2. 文件为压缩格式，需先解压再解析；3. MarketReplay.DumpMarketData/DumpMarketDepth 为未文档化 API，未来版本可能移除或变更；4. Market Replay 数据文件可能很大（一天的 tick 数据数百 MB）；5. 某些市场的 Market Replay 数据可能不完整或有缺失；6. 官方立场是 Replay 数据只能用于回放，不支持其他用途",
+
+  "multi_thread_support": "是 - 可对多个 .nrd 文件进行并行解析",
+  "parallelism_model": "文件级并行 - 每个 .nrd 文件（按日期/品种组织）可独立解析，天然适合多线程并行处理",
+  "latency": "不适用 - 离线文件解析，无实时通信",
+  "throughput": "高 - 直接读取本地二进制文件，Rust 解析速度可达数百万 tick/秒",
+  "memory_footprint": "可控 - 可流式逐条解析 tick 数据，无需全部加载到内存",
+  "backtest_speed_benchmark": "[不确定] - 取决于解析器实现效率，理论上 Rust 解析二进制文件速度极快",
+
+  "data_granularity": "tick - Market Replay 文件包含逐笔 tick 数据，时间精度到 100 纳秒",
+  "data_fidelity": "极高 - 包含完整的 Last（成交）、Bid/Ask（Level 1）和 MarketDepth（Level 2 订单簿深度）数据；是 NT8 中数据保真度最高的格式",
+
+  "integration_method": "方案 A（推荐 - 通过 NT8 AddOn）：1. 编写 NinjaScript AddOn 调用 MarketReplay.DumpMarketData() 将 .nrd 导出为 CSV；2. Rust 程序解析 CSV 文件。方案 B（直接解析）：1. 参考 nrdtocsv 项目（github.com/eugeneilyin/nrdtocsv）了解 .nrd 文件结构；2. 用 Rust 编写二进制解析器直接读取 .nrd 文件；3. 需处理压缩和数据格式变化。",
+  "data_format": "方案 A 导出格式：CSV（分号分隔），字段包含时间戳、价格、bid、ask、成交量等；方案 B 原始格式：专有压缩二进制格式（.nrd）",
+  "bidirectional": "否 - 仅支持单向数据读取",
+  "serialization_overhead": "方案 A：CSV 文本转换有一定开销；方案 B：直接读取二进制，无序列化开销",
+
+  "dev_effort": "方案 A：1 人周（AddOn 导出 + Rust CSV 解析器）；方案 B：2-3 人周（二进制逆向 + Rust 解析器 + 测试验证）",
+  "maintenance": "高 - .nrd 格式未文档化，NT8 版本更新可能导致格式变化需重新适配",
+  "ecosystem_maturity": "低 - 非标准化方案，仅有少数社区项目（nrdtocsv）尝试解析",
+  "community_activity": "nrdtocsv（GitHub eugeneilyin/nrdtocsv）：社区维护的 NT8 AddOn，利用未文档化的 MarketReplay.DumpMarketDepth 功能；Bookmap 论坛也有将 NT8 replay 数据转换的讨论",
+  "python_binding": "不适用",
+  "live_trading_support": "不适用 - 此方案处理离线历史数据",
+  "nt8_version_compatibility": "[不确定] - .nrd 格式随 NT8 版本可能有变化，nrdtocsv 项目可能需要随版本更新适配",
+
+  "event_model": "不适用 - 批量离线文件处理，非事件驱动",
+  "fault_tolerance": "方案 A：依赖 NT8 稳定性；方案 B：需实现数据完整性校验、损坏文件检测和跳过机制",
+
+  "uncertain": ["backtest_speed_benchmark", "nt8_version_compatibility"]
+}

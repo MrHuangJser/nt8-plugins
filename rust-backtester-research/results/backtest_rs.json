@@ -1,0 +1,55 @@
+{
+  "basic_info": {
+    "name": "backtest_rs",
+    "category": "backtest_engine",
+    "description": "Rust 事件驱动回测引擎（对应项目 rust_bt / jensnesten/rust_bt），专注 tick-by-tick 策略模拟。提供回测引擎和实盘引擎两套组件，回测引擎按时间顺序模拟交易，实盘引擎通过 LiveBroker、LiveData、LiveStrategy 等组件处理流式市场数据和订单执行。"
+  },
+  "feasibility": {
+    "feasibility": "中低",
+    "complexity": "中",
+    "nt8_api_support": "NT8 API 不原生支持该方案。需要通过自定义数据管道与 NT8 集成。",
+    "limitations": "项目规模较小，社区有限；功能相对基础，与 NautilusTrader 或 Barter-rs 等成熟框架相比功能较少；文档不够完善；没有 crates.io 正式发布（需直接从 GitHub 引用）；缺乏生产环境验证。"
+  },
+  "performance": {
+    "multi_thread_support": "[不确定] 文档未明确说明多线程支持情况。Rust 实现理论上可利用多线程。",
+    "parallelism_model": "[不确定] 未详细描述并行化模型。",
+    "latency": "不适用（非通信方案，但框架关注延迟模拟）",
+    "throughput": "中高。Rust 原生实现，专注 tick-by-tick 处理，性能定位为高性能低延迟。",
+    "memory_footprint": "[不确定] 未有具体数据。",
+    "backtest_speed_benchmark": "[不确定] 无公开回测速度基准数据。"
+  },
+  "data_quality": {
+    "data_granularity": "tick 级别。专注 tick-by-tick 策略模拟。",
+    "data_fidelity": "[不确定] 文档未详细说明支持的数据维度。基本支持价格和成交量数据。"
+  },
+  "integration": {
+    "integration_method": "与 NT8 集成方式：1) 从 NT8 导出历史 tick 数据；2) 在 rust_bt 中加载数据并运行回测；3) 导出交易结果；4) 导入 NT8 进行分析。需要自行开发数据转换和导入/导出逻辑。",
+    "data_format": "[不确定] 文档未明确说明支持的数据格式。通过修改 src/main.rs 可自定义数据加载逻辑。",
+    "bidirectional": "不支持与 NT8 的双向通信",
+    "serialization_overhead": "[不确定] 无相关性能数据。"
+  },
+  "ecosystem": {
+    "dev_effort": "集成到 NT8 数据分析流程约 2-3 人周（含开发数据管道和策略移植）",
+    "maintenance": "低维护难度。项目更新不频繁，API 相对简单。",
+    "ecosystem_maturity": "低。个人项目，无 crates.io 正式发布，文档有限，社区很小。",
+    "community_activity": "[不确定] GitHub 仓库 jensnesten/rust_bt，项目规模较小。具体 stars 数和活跃度需实时查询。",
+    "python_binding": "不提供 Python 绑定",
+    "live_trading_support": "支持。提供 LiveBroker、LiveData、Order、LiveStrategy 等实盘组件，可处理流式市场数据和执行订单。",
+    "nt8_version_compatibility": "不适用，与 NT8 无直接关系"
+  },
+  "architecture": {
+    "event_model": "事件驱动。回测引擎按时间顺序编排交易模拟过程，确保受控的时序处理。实盘引擎使用独立的组件处理流式数据和订单执行。",
+    "fault_tolerance": "[不确定] 文档未详细说明容错机制。作为轻量级框架，容错能力可能有限。"
+  },
+  "uncertain": [
+    "multi_thread_support",
+    "parallelism_model",
+    "memory_footprint",
+    "backtest_speed_benchmark",
+    "data_fidelity",
+    "data_format",
+    "serialization_overhead",
+    "community_activity",
+    "fault_tolerance"
+  ]
+}

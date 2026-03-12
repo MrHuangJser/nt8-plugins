@@ -1,0 +1,38 @@
+{
+  "name": "直接对接数据源 (Rithmic/CQG/Kinetick)",
+  "category": "data_acquisition",
+  "description": "绕过 NT8，直接使用数据供应商（Rithmic、CQG、Kinetick）的原生 SDK/API 获取历史和实时市场数据。Rithmic 提供 R|API+（C++ SDK）和 R|Protocol API（WebSocket + Protobuf）；CQG 提供 COM API 和 Web API；Kinetick 为 NT 旗下数据服务，无独立 API。",
+
+  "feasibility": "中 - Rithmic 和 CQG 均提供成熟的 API，但需要独立的数据订阅账户和交易所数据授权；Kinetick 无独立 API，必须通过 NT8 使用",
+  "complexity": "高 - Rithmic R|API+ 为 C++ SDK，集成到 Rust 需通过 FFI；R|Protocol API 使用 Protobuf + WebSocket 相对友好；CQG 基于 COM 技术，跨平台困难",
+  "nt8_api_support": "不适用 - 此方案绕过 NT8，直接与数据供应商通信",
+  "limitations": "1. Rithmic R|API+ 为 C++ 库，Rust 集成需编写 FFI 绑定，工作量大且容易出错；2. CQG COM API 仅限 Windows，跨平台困难；3. Kinetick 无独立 API，无法直接对接；4. 需要额外的数据订阅费用和交易所数据授权（CME、ICE 等按月收费）；5. API 访问可能需要最低账户余额或交易量要求；6. Rithmic R|Diamond API（超低延迟版本）需额外付费且审批流程长；7. 各数据源的数据格式和字段定义不统一，需编写多套解析器",
+
+  "multi_thread_support": "是 - Rithmic R|API+ 支持多线程回调；R|Protocol API 基于 WebSocket 天然支持异步多路复用",
+  "parallelism_model": "异步 + 多品种并行 - 可通过多个 WebSocket 连接同时订阅多个品种；Rithmic R|API+ 支持在独立线程中处理不同品种的数据回调",
+  "latency": "极低 - 直接连接数据源，无 NT8 中间层开销；Rithmic 以超低延迟著称（微秒级）；CQG 延迟约百微秒级",
+  "throughput": "高 - 专业级数据通道，支持高频 tick 数据流；Rithmic R|Diamond API 可直连交易所网关获取最大吞吐量",
+  "memory_footprint": "可控 - 由开发者自行管理数据缓冲区大小，无 NT8 平台层额外内存开销",
+  "backtest_speed_benchmark": "[不确定] - 取决于数据下载和处理的实现方式，非回测引擎方案",
+
+  "data_granularity": "tick - Rithmic 和 CQG 均支持逐 tick 数据，包含时间戳精度到微秒/纳秒级别",
+  "data_fidelity": "极高 - Rithmic 提供完整的 Level 1（Last/Bid/Ask）和 Level 2（订单簿深度）数据；CQG 同样提供 tick 级 bid/ask 和多层订单簿数据；数据直接来自交易所 feed，保真度最高",
+
+  "integration_method": "Rithmic R|Protocol API 方案：1. 注册 Rithmic 数据账户并获取 API 访问权限；2. 使用 Rust WebSocket 库连接 Rithmic 服务器；3. 通过 Protobuf 协议发送数据请求和接收数据；4. 解析并存储 tick 数据。CQG Web API 方案：1. 注册 CQG 合作伙伴账户；2. 通过 WebSocket 连接 CQG 服务器；3. 请求历史数据和订阅实时数据。已有开源 Rust 库 async-rithmic 可参考。",
+  "data_format": "Rithmic R|Protocol API：Google Protobuf 序列化；Rithmic R|API+：C++ 结构体；CQG Web API：WebSocket + 自定义协议；CQG COM API：COM 对象",
+  "bidirectional": "是 - API 天然支持双向通信，既可获取数据也可提交订单",
+  "serialization_overhead": "Rithmic R|Protocol：Protobuf 序列化效率高，开销极小；R|API+：C++ 结构体无序列化开销但需 FFI 桥接；CQG COM：COM 调用有一定开销",
+
+  "dev_effort": "3-4 人周 - Rithmic R|Protocol API 集成约 2-3 周（WebSocket + Protobuf 解析 + 数据存储）；CQG 集成额外 1-2 周；已有 async-rithmic (Python) 开源库可参考实现",
+  "maintenance": "中 - 需关注数据供应商 API 版本更新，但核心协议较稳定；交易所数据授权需每年续费",
+  "ecosystem_maturity": "Rithmic：成熟（专业量化交易标配）；CQG：成熟（机构级数据服务商）；但 Rust 生态较薄弱，仅有少量社区维护的绑定库",
+  "community_activity": "Rithmic：GitHub 上有 async-rithmic (Python) 等开源项目；CQG：合作伙伴文档中心有代码示例。Rust 原生绑定社区较小",
+  "python_binding": "不适用 - 此方案直接对接数据源，与 Python 无关（但 Rithmic 有 Python 社区库 async-rithmic）",
+  "live_trading_support": "是 - Rithmic 和 CQG 的 API 同时支持数据获取和订单执行，可无缝从回测切换到实盘",
+  "nt8_version_compatibility": "不适用 - 此方案绕过 NT8",
+
+  "event_model": "异步事件驱动 - Rithmic R|Protocol 基于 WebSocket 事件流；R|API+ 基于 C++ 回调；CQG Web API 基于 WebSocket 消息推送",
+  "fault_tolerance": "中 - Rithmic 提供连接状态监控和自动重连机制；数据缺失需自行实现检测和补录逻辑",
+
+  "uncertain": ["backtest_speed_benchmark"]
+}

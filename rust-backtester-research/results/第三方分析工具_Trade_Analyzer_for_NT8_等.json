@@ -1,0 +1,41 @@
+{
+  "name": "第三方分析工具 (Trade Analyzer for NT8 等)",
+  "category": "result_analysis",
+  "description": "NT8 生态内的第三方分析插件，如 MAS Capital Trade Analyzer、SampleTradeAnalyzer 等。提供比 NT8 内置 Strategy Analyzer 更丰富的交易分析功能，包括详细的交易统计报表、盈亏分布、时间分析、CSV 导出和 Web 报告生成等。部分工具作为 NT8 AddOn/Indicator 运行，部分为独立应用读取 NT8 数据。",
+
+  "feasibility": "高——NT8 生态内已有多个成熟的第三方分析工具，安装即用，无需开发。",
+  "complexity": "低——大多数工具以 NT8 AddOn 或 Indicator 形式提供，通过 NinjaTrader 导入功能安装，配置简单。",
+  "nt8_api_support": "间接支持——NT8 提供 AddOn/Indicator 开发框架，第三方工具基于此框架开发。NT8 官方 SampleTradeAnalyzer 示例代码可作为参考。",
+  "limitations": "1. 多数第三方工具为商业付费软件（$50-$300 不等）；2. 功能固定，自定义能力有限，无法按需扩展分析指标；3. 部分工具更新滞后，可能不兼容最新 NT8 版本；4. 数据导出格式可能受限（部分仅支持 CSV）；5. 社区/免费工具质量参差不齐，文档不完善；6. 无法直接分析外部回测引擎（如 Rust）产生的结果。",
+
+  "multi_thread_support": "通常不支持——大多数 NT8 第三方工具运行在 NT8 主线程或 NinjaScript 执行线程内，不额外使用多线程。",
+  "parallelism_model": "单线程为主——受限于 NT8 NinjaScript 执行模型，分析计算为串行执行。",
+  "latency": "不适用——本地插件方式运行，无网络通信延迟。",
+  "throughput": "中等——受限于 NT8 平台性能，处理大量交易记录时可能较慢。",
+  "memory_footprint": "低到中——作为 NT8 插件运行，内存占用通常较小，但加载大量交易数据时可能增加。",
+  "backtest_speed_benchmark": "不适用——分析工具不执行回测，仅分析已有结果。",
+
+  "data_granularity": "取决于输入数据——可分析 NT8 产生的任意粒度回测结果（从 tick 到日线）。分析报表通常按交易为单位。",
+  "data_fidelity": "中到高——可获取 NT8 交易记录中的所有字段（入场/出场价格、时间、数量、盈亏等），但通常不涉及原始 tick 数据分析。",
+
+  "integration_method": "1. 从 NinjaTrader 生态市场或开发者网站下载 .zip 安装包；2. 通过 NT8 Control Center > Tools > Import 导入安装；3. 在 Strategy Analyzer 或 Chart 中加载使用；4. 部分工具需在 NT8 AddOn 窗口中单独启动。MAS Capital Trade Analyzer 等商业工具还可生成 Web 报告。",
+  "data_format": "NT8 内部对象模型为主；导出支持 CSV、HTML 报告。部分高级工具支持 JSON 导出。",
+  "bidirectional": "通常为单向——读取 NT8 交易数据进行分析，不回写数据到 NT8。",
+  "serialization_overhead": "极低——作为 NT8 插件直接访问 .NET 内存对象，无需序列化。导出为 CSV 时有文本序列化开销。",
+
+  "dev_effort": "使用现成工具：0.5-1 人天（安装配置）；基于 SampleTradeAnalyzer 二次开发：2-5 人天。",
+  "maintenance": "低到中——商业工具由开发者维护；免费/开源工具可能需要自行跟进 NT8 版本更新。",
+  "ecosystem_maturity": "中——NT8 第三方分析工具数量有限，质量参差不齐。商业工具如 MAS Capital 较为成熟，免费工具选择较少。",
+  "community_activity": "[不确定] NT8 论坛有相关讨论，但多数第三方工具无公开 GitHub 仓库。MAS Capital 等商业工具有自己的用户社区但规模不大。",
+  "python_binding": "不支持——纯 NT8/NinjaScript（C#）生态内工具。",
+  "live_trading_support": "部分支持——部分工具（如 Trade Analyzer）可在实盘交易中实时分析交易表现。",
+  "nt8_version_compatibility": "[不确定] 取决于具体工具。商业工具通常跟进 NT8 主要版本更新，但可能有延迟。建议购买前确认兼容性。",
+
+  "event_model": "回调式——作为 NT8 插件运行，基于 NinjaScript 事件回调模型。",
+  "fault_tolerance": "有限——依赖 NT8 平台的错误处理机制，插件本身通常不提供额外容错功能。",
+
+  "uncertain": [
+    "community_activity",
+    "nt8_version_compatibility"
+  ]
+}

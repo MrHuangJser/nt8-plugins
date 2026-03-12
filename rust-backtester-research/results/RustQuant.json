@@ -1,0 +1,49 @@
+{
+  "basic_info": {
+    "name": "RustQuant",
+    "category": "backtest_engine",
+    "description": "Rust 量化金融库，提供期权定价（闭式解、蒙特卡洛）、随机过程生成（布朗运动、短期利率模型）、自动微分（AAD）、统计分布、FFT、数值积分、优化/求根算法、风险收益指标、线性/逻辑回归、KNN分类等模块。可作为回测系统的定价和风险组件使用。"
+  },
+  "feasibility": {
+    "feasibility": "中",
+    "complexity": "中",
+    "nt8_api_support": "NT8 API 不原生支持该方案。RustQuant 是独立的 Rust 库，与 NT8 无直接集成，需要通过自定义数据管道连接。",
+    "limitations": "该项目是个人业余时间开发，非专业金融软件库；不包含回测引擎框架本身，仅提供定价/风险/统计等组件；缺乏成熟的生产环境验证；文档相对薄弱，部分模块仍在开发中。"
+  },
+  "performance": {
+    "multi_thread_support": "部分支持，蒙特卡洛定价等计算密集模块可利用 Rust 的并行能力，但库本身未内置并行化框架。",
+    "parallelism_model": "无内置并行模型。用户可自行使用 Rayon 或 Tokio 进行参数优化并行或蒙特卡洛模拟并行，但库本身不提供开箱即用的并行化支持。",
+    "latency": "不适用（非通信方案）",
+    "throughput": "作为计算库，单次定价/风险计算速度快（Rust 原生性能），但不涉及 tick 数据流处理。",
+    "memory_footprint": "较低，Rust 零成本抽象，无 GC 开销。具体取决于蒙特卡洛模拟的路径数量。",
+    "backtest_speed_benchmark": "[不确定] 无公开回测速度基准数据，因为该库不是回测引擎，而是量化计算组件。"
+  },
+  "data_quality": {
+    "data_granularity": "不适用（非数据源或回测引擎，不直接处理市场数据粒度）",
+    "data_fidelity": "不适用。库本身不处理市场数据，而是提供数学/统计/定价计算。支持从 Yahoo Finance 下载数据和 CSV/JSON/Parquet 读写。"
+  },
+  "integration": {
+    "integration_method": "无直接 NT8 集成方式。可作为独立 Rust 回测引擎的组件使用：1) 在 Rust 回测引擎中引入 RustQuant crate 进行定价/风险计算；2) 回测结果通过 CSV/JSON 导出后导入 NT8 分析。",
+    "data_format": "支持 CSV、JSON、Parquet 格式读写",
+    "bidirectional": "不支持双向通信，仅作为计算库单向使用",
+    "serialization_overhead": "[不确定] 未有具体序列化性能对比数据。支持标准格式（CSV/JSON/Parquet），Parquet 格式在大数据量下效率较高。"
+  },
+  "ecosystem": {
+    "dev_effort": "作为组件集成到回测引擎约 1-2 人周（学习 API + 集成定价模块）",
+    "maintenance": "低维护难度，不依赖 NT8 更新。需关注 crate 版本更新和 API 变化。",
+    "ecosystem_maturity": "中等偏低。有 crates.io 发布和文档网站（The RustQuant Book），但仍是个人项目，文档不够完善。",
+    "community_activity": "[不确定] GitHub 仓库 avhz/RustQuant，具体 stars 数和最近活跃度需实时查询。2024年初在 Hacker News 有讨论，项目持续接受贡献。",
+    "python_binding": "不提供 Python 绑定",
+    "live_trading_support": "不支持实盘交易，仅为量化计算库",
+    "nt8_version_compatibility": "不适用，与 NT8 无直接关系"
+  },
+  "architecture": {
+    "event_model": "不适用（非事件驱动回测引擎，而是计算库）",
+    "fault_tolerance": "作为计算库，容错能力取决于调用方。库本身通过 Rust 的 Result 类型处理错误。"
+  },
+  "uncertain": [
+    "backtest_speed_benchmark",
+    "serialization_overhead",
+    "community_activity"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "basic_info": {
+    "name": "NautilusTrader",
+    "category": "backtest_engine",
+    "description": "生产级 Rust 原生交易引擎，具有确定性事件驱动架构和纳秒级精度。核心组件全部用 Rust 编写，通过 Cython 和 PyO3 提供 Python API 层。支持多资产、多交易所的回测和实盘交易，回测与实盘代码完全一致。"
+  },
+  "feasibility": {
+    "feasibility": "高",
+    "complexity": "中高",
+    "nt8_api_support": "NT8 API 不原生支持该方案。NautilusTrader 是独立平台，需要通过数据导出/导入与 NT8 集成。",
+    "limitations": "学习曲线较陡，概念较多；Rust 核心迁移仍在进行中（2.x 版本目标）；API 可能在 Rust 移植完成前有变化；安装需要编译 Rust 代码（但 PyO3 wheel 已预编译，用户无需安装 Rust）；文档在持续改善中但仍有不完善之处。"
+  },
+  "performance": {
+    "multi_thread_support": "支持多线程。Rust 原生多线程核心，Python 层通过 PyO3 调用。",
+    "parallelism_model": "多品种并行 + 多策略并行 + 异步 I/O。支持同时在多个交易所、多个品种、多个策略上运行回测。Rust 核心提供高性能确定性事件处理，Python 层用于策略逻辑编排。足够快以训练 AI 交易代理（RL/ES）。",
+    "latency": "不适用（非通信方案）",
+    "throughput": "极高。可每秒流式处理超过 500 万行数据，能处理超出可用 RAM 的数据量。纳秒级分辨率时间戳。",
+    "memory_footprint": "高效。能处理超出 RAM 容量的数据，说明有流式处理机制。Rust 核心无 GC 开销。",
+    "backtest_speed_benchmark": "官方数据：可每秒流式处理超过 500 万行（rows/sec）。这是目前开源回测引擎中公开的最高性能基准之一。"
+  },
+  "data_quality": {
+    "data_granularity": "tick 级别。支持 quote tick、trade tick、bar、订单簿数据和自定义数据，全部纳秒级精度。",
+    "data_fidelity": "高保真度。支持 bid/ask quote tick、trade tick、订单簿数据（完整深度）、bar 数据。提供标准化的金融工具定义，所有交易所的全部字段可用。"
+  },
+  "integration": {
+    "integration_method": "与 NT8 集成方式：1) 从 NT8 导出历史数据（CSV/JSON）；2) 在 NautilusTrader 中通过 Python API 加载数据、定义策略并运行回测；3) 利用其内置的回测报告和分析功能查看结果；4) 也可将交易记录导出后导入 NT8 Trade Performance 面板进行分析。NautilusTrader 提供高层 API（BacktestNode + 配置对象）和低层 API（BacktestEngine 直接操作）两种回测方式。",
+    "data_format": "支持多种格式，包括 CSV、Parquet、自定义二进制格式。通过 Python API 可灵活处理数据转换。",
+    "bidirectional": "不直接支持与 NT8 的双向通信，需要通过文件中转",
+    "serialization_overhead": "[不确定] 内部使用 Rust 原生数据结构，跨 Python-Rust 边界通过 PyO3 传递，开销极小。外部数据导入/导出的序列化开销取决于所选格式。"
+  },
+  "ecosystem": {
+    "dev_effort": "集成到 NT8 数据分析流程约 2-4 人周（含学习框架、开发策略和数据管道）。如果仅使用 Python API 编写策略，学习成本相对较低。",
+    "maintenance": "中等维护难度。项目非常活跃，有商业支持（Nautech Systems 公司维护）。需关注版本更新和 API 变化。",
+    "ecosystem_maturity": "高。生产级项目，有专门公司维护，文档网站完善，PyPI 发布（nautilus_trader），活跃的社区和讨论。",
+    "community_activity": "[不确定] GitHub 仓库 nautechsystems/nautilus_trader，项目非常活跃。有 PyPI 定期发布（v1.203+），有 GitHub Discussions。具体 stars 数需实时查询。",
+    "python_binding": "提供完整的 Python 绑定。通过 Cython 和 PyO3 实现，用户无需安装 Rust 即可使用。可使用 Python 生态的 ML/AI 框架。",
+    "live_trading_support": "完全支持。回测与实盘代码完全一致（backtest-live code parity），支持现货、期货、衍生品和期权交易。",
+    "nt8_version_compatibility": "不适用，与 NT8 无直接关系"
+  },
+  "architecture": {
+    "event_model": "确定性事件驱动架构。Rust 原生核心引擎处理所有事件，纳秒级时间分辨率。支持多交易所、多品种、多策略的同步事件处理。Python 作为控制平面用于策略逻辑、配置和编排。",
+    "fault_tolerance": "生产级容错能力。作为生产级交易引擎，具备完善的异常处理和错误恢复机制。支持确定性回放，便于问题排查和策略验证。"
+  },
+  "uncertain": [
+    "serialization_overhead",
+    "community_activity"
+  ]
+}

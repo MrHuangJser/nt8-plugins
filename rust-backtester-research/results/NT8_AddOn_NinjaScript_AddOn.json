@@ -1,0 +1,38 @@
+{
+  "name": "NT8 AddOn (NinjaScript AddOn)",
+  "category": "data_acquisition",
+  "description": "NT8 官方插件开发框架，通过 BarsRequest 和 MarketData API 访问历史K线和实时市场数据。AddOn 是 NT8 中最灵活的扩展机制，可创建独立窗口、订阅多品种数据，并通过 NtTabPage 集成到平台界面中。",
+
+  "feasibility": "高 - NT8 官方支持，BarsRequest/MarketData API 文档完善，社区有大量示例代码（如 AddOn_Framework_NinjaScript_Basic）",
+  "complexity": "中 - 需要掌握 NinjaScript (C#) 开发，理解 AddOn 生命周期和数据请求回调机制",
+  "nt8_api_support": "完全支持 - BarsRequest、MarketData、MarketDepth 均为官方 API，有完整的 HelpGuide 文档",
+  "limitations": "1. 数据请求在 NT8 UI 线程中执行，大量并发请求可能导致界面卡顿；2. BarsRequest 回调中获取的是历史数据，Update 事件是实时数据，需分别处理；3. 单个 AddOn 实例中同时订阅过多品种会增加内存压力；4. 导出数据需自行实现文件写入逻辑（StreamWriter等）；5. 受限于 NT8 的 .NET 4.8 运行时，无法使用最新 .NET 特性",
+
+  "multi_thread_support": "有限 - NT8 内部使用单线程模型处理数据事件，但 AddOn 可在独立线程中处理导出逻辑",
+  "parallelism_model": "异步回调 - BarsRequest 使用异步 Request/Update 回调模型，可同时发起多个 BarsRequest 但回调在 NT8 调度线程中串行执行",
+  "latency": "低 - 进程内 API 调用，无网络/IPC 开销",
+  "throughput": "中 - 受限于 NT8 内部数据管道，tick 级数据导出速度约数万条/秒",
+  "memory_footprint": "中 - 依赖 NT8 进程内存，大量 BarsRequest 会增加 NT8 整体内存占用",
+  "backtest_speed_benchmark": "[不确定] - 此方案用于数据获取而非回测，无直接基准数据",
+
+  "data_granularity": "tick - 支持 tick、秒、分钟、日等所有 NT8 支持的数据粒度",
+  "data_fidelity": "高 - 通过 MarketData 可获取 Last/Bid/Ask 价格和成交量；启用 Tick Replay 后可获取逐笔 bid/ask 数据；MarketDepth 可获取订单簿深度（Level 2）",
+
+  "integration_method": "1. 在 NT8 中创建 NinjaScript AddOn 项目；2. 使用 BarsRequest 请求历史K线数据，MarketData 订阅实时数据；3. 在回调中将数据序列化为所需格式（CSV/JSON/二进制）；4. 通过文件系统、TCP Socket 或命名管道将数据传递给外部 Rust 程序",
+  "data_format": "自定义 - 需自行实现序列化，常见选择为 CSV 文件或通过 Socket 传输 JSON/二进制数据",
+  "bidirectional": "有限 - 原生仅支持数据导出方向；若需双向通信需自行实现 Socket/管道通信层",
+  "serialization_overhead": "[不确定] - 取决于选择的序列化格式。CSV 文本格式开销较大，二进制格式（如 FlatBuffers/MessagePack）开销较小。进程内 API 调用本身无序列化开销",
+
+  "dev_effort": "1-2 人周 - 基础数据导出 AddOn 约 3-5 天，含错误处理和多品种支持约 1-2 周",
+  "maintenance": "中 - 需跟随 NT8 版本更新，但 NinjaScript API 较稳定，主要版本间通常兼容",
+  "ecosystem_maturity": "成熟 - NT8 NinjaScript 生态成熟，官方文档完善，NinjaTrader 论坛活跃",
+  "community_activity": "活跃 - NinjaTrader 官方论坛 Add-On Development 板块持续有新帖，官方支持团队响应及时",
+  "python_binding": "不适用 - 此方案为 C# NinjaScript 开发，不涉及 Python",
+  "live_trading_support": "不适用 - 此方案专注于数据获取，实盘交易由 NT8 本身处理",
+  "nt8_version_compatibility": "兼容 NT8 全版本 - NinjaScript AddOn API 自 NT8 发布以来保持稳定，NinjaTrader Desktop 新版（原 NT8）继续支持",
+
+  "event_model": "回调式 - BarsRequest.Request 完成后触发回调遍历历史数据，Update 事件处理实时数据到达",
+  "fault_tolerance": "基础 - 需自行实现断线重连、数据缺失检测等逻辑；BarsRequest 失败会返回错误状态",
+
+  "uncertain": ["backtest_speed_benchmark", "serialization_overhead"]
+}

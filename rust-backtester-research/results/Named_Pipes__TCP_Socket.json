@@ -1,0 +1,38 @@
+{
+  "name": "Named Pipes / TCP Socket",
+  "category": "communication",
+  "description": "基于操作系统提供的进程间通信（IPC）机制——Named Pipes（命名管道）或 TCP Socket 实现 NT8 与 Rust 回测引擎之间的通信。Named Pipes 适用于同一台机器上的进程通信，低延迟；TCP Socket 既支持本地也支持跨网络通信。两者均为字节流通道，需自行定义消息协议和序列化格式。",
+
+  "feasibility": "高——Named Pipes 和 TCP Socket 都是操作系统原生支持的成熟技术，Rust 和 C# 均有标准库级别的支持。",
+  "complexity": "中——底层通信机制简单，但需要自行设计消息协议（消息边界、头部、序列化格式）、错误处理、断线重连等。比 gRPC 更多的 DIY 工作。",
+  "nt8_api_support": "间接支持——NT8 NinjaScript 可使用 .NET Framework 的 System.IO.Pipes（Named Pipes）和 System.Net.Sockets（TCP）。无需额外 NuGet 包，均为 .NET 内置功能。",
+  "limitations": "1. 需要自定义消息协议——字节流无消息边界，需自行实现分帧（如长度前缀、分隔符）；2. 无内置序列化——需选择序列化方案（JSON/MessagePack/FlatBuffers 等）并自行集成；3. Named Pipes 仅限同机通信，不可跨网络；4. TCP Socket 需要处理粘包/拆包、半开连接、Nagle 算法延迟等底层问题；5. 无服务发现机制——需硬编码管道名/端口；6. 调试困难——原始字节流不如 gRPC 的结构化日志直观。",
+
+  "multi_thread_support": "支持——可使用多线程处理多个连接。Rust 端可用 Tokio 异步运行时管理大量并发连接。C# 端可用 async/await 异步模型。",
+  "parallelism_model": "异步 I/O——Rust Tokio / C# async/await 均支持异步管道/Socket 操作。可多连接并行传输不同品种数据，或单连接内多路复用。",
+  "latency": "极低——Named Pipes 本地延迟约 10-100 微秒。TCP localhost 延迟约 50-200 微秒（受 Nagle 算法影响，可禁用 TCP_NODELAY）。比 gRPC 少了 HTTP/2 协议层开销。",
+  "throughput": "高——Named Pipes 本地吞吐约 1-5 GB/s。TCP localhost 吞吐约 0.5-2 GB/s。远高于大多数应用需求。批量 tick 数据传输完全无压力。",
+  "memory_footprint": "极低——无额外运行时开销，仅有内核缓冲区（通常 64KB-1MB）和应用层缓冲区。整体内存占用可控在几 MB 以内。",
+  "backtest_speed_benchmark": "不适用——通信层本身不是瓶颈。数据传输层参考：100 万条 tick 数据通过 Named Pipe 传输（含 MessagePack 序列化）约 0.1-0.5 秒。",
+
+  "data_granularity": "支持任意粒度——字节流通道可传输任意数据。",
+  "data_fidelity": "取决于序列化格式——字节流本身不丢失信息。使用二进制序列化（MessagePack/FlatBuffers）可完整保留数据精度和类型信息。",
+
+  "integration_method": "1. 约定通信方式：Named Pipe 名称（如 \\\\.\\pipe\\rust_backtester）或 TCP 端口（如 localhost:9876）；2. 约定消息协议：推荐长度前缀（4 字节大端序消息长度 + 消息体）；3. 约定序列化格式：推荐 MessagePack 或 FlatBuffers；4. Rust 端：使用 tokio::net::windows::named_pipe 或 tokio::net::TcpListener；5. C#/NT8 端：在 AddOn 中使用 NamedPipeClientStream 或 TcpClient，配合 async/await 异步读写；6. 实现连接管理、心跳、重连逻辑。",
+  "data_format": "自定义——需要选择序列化格式。推荐方案：MessagePack（二进制 JSON 替代，紧凑高效）、FlatBuffers（零拷贝反序列化）、或自定义二进制格式（最高性能）。",
+  "bidirectional": "完全支持——Named Pipes 支持双工模式，TCP Socket 天然全双工。双方可同时发送和接收数据。",
+  "serialization_overhead": "取决于选择的格式。MessagePack：比 JSON 小 30-50%，序列化速度约 500 MB/s-1 GB/s。FlatBuffers：零拷贝反序列化，序列化时有构建开销。自定义二进制：接近零开销但开发维护成本高。",
+
+  "dev_effort": "基础单向通信：2-3 人天。完整双向协议 + 序列化 + 错误处理 + 重连：1-2 人周。相比 gRPC 需要更多的协议设计工作。",
+  "maintenance": "低到中——底层 API 极其稳定（OS 级别），但自定义协议的变更需要两端同步修改。建议使用版本化的消息格式。",
+  "ecosystem_maturity": "极高——Named Pipes 和 TCP Socket 是操作系统基础设施，数十年历史。Rust tokio 和 .NET 标准库支持完善。",
+  "community_activity": "Tokio: GitHub 27k+ stars，Rust 异步运行时事实标准。.NET Socket/Pipe API: 微软官方维护。大量教程和示例可参考。",
+  "python_binding": "支持——Python 内置 socket 和 multiprocessing.connection（Pipe）模块，可直接与 Rust/C# 端通信，只需匹配消息协议和序列化格式。",
+  "live_trading_support": "非常适合——低延迟特性特别适合实盘交易信号传递。Named Pipes 是 Windows 上进程间通信的推荐方式之一。",
+  "nt8_version_compatibility": "完全兼容——System.IO.Pipes 和 System.Net.Sockets 是 .NET Framework 标准 API，所有 NT8 版本均支持。",
+
+  "event_model": "异步事件驱动——基于异步 I/O（Rust: Tokio async/await，C#: async/await + Task）。可实现发布-订阅或请求-响应模式，取决于自定义协议设计。",
+  "fault_tolerance": "需要自行实现——断线检测（心跳机制）、自动重连、消息重传、消息队列缓存。TCP 的 keepalive 可辅助检测断连。Named Pipe 断开后需重新建立连接。",
+
+  "uncertain": []
+}

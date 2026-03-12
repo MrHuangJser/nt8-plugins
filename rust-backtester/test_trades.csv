@@ -1,0 +1,2 @@
+exit_time,direction,signal_name,entry_price,exit_price,pnl,exit_reason
+2024-01-02 18:54:10,Long,MB_BO_Long,5019.25,5021.50,2.25,TP

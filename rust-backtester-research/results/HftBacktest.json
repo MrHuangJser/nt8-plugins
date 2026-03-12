@@ -1,0 +1,49 @@
+{
+  "basic_info": {
+    "name": "HftBacktest",
+    "category": "backtest_engine",
+    "description": "Rust 高频交易回测框架，专注于高保真市场回放。支持全订单簿回放（Level-2 MBP 和 Level-3 MBO）、队列位置模拟、前馈和订单延迟建模。提供完整的 tick-by-tick 仿真，包含 Binance 和 Bybit 的实战加密货币交易示例。"
+  },
+  "feasibility": {
+    "feasibility": "高",
+    "complexity": "高",
+    "nt8_api_support": "NT8 API 不原生支持该方案。HftBacktest 是独立框架，需要通过自定义数据管道与 NT8 集成。",
+    "limitations": "项目仍处于初始开发阶段，可能存在不兼容的 API 变更；实盘交易功能尚未经过全面测试；主要面向加密货币高频交易场景；需要完整的 Level-2/Level-3 订单簿数据，数据获取成本较高；新功能因 Numba 限制正在迁移到 Rust，Python 版本可能逐渐落后。"
+  },
+  "performance": {
+    "multi_thread_support": "支持。Rust 原生多线程能力，适合处理大量高频 tick 数据。",
+    "parallelism_model": "多品种并行 + 多交易所并行。支持多资产、多交易所模型的回测。内部使用高效的事件驱动循环处理全量 tick 数据。性能是核心设计目标，因 Numba 限制而从 Python 迁移到 Rust。",
+    "latency": "不适用（非通信方案，但框架本身专注于延迟建模和模拟）",
+    "throughput": "极高。专为高频交易设计，能处理完整的 tick-by-tick 订单簿数据流。Rust 实现确保处理大规模高频数据时的性能。",
+    "memory_footprint": "中等偏高。需要在内存中维护完整的订单簿状态（Level-2/Level-3），处理高频数据时内存占用较大。",
+    "backtest_speed_benchmark": "[不确定] 无公开的标准化回测速度基准数据。但作为专门的高频回测框架，其设计目标是处理全量订单簿数据的高效回放。"
+  },
+  "data_quality": {
+    "data_granularity": "tick 级别（逐笔）。支持完整的 tick-by-tick 仿真，可自定义时间间隔或基于数据馈送和订单接收驱动。",
+    "data_fidelity": "极高保真度。支持完整订单簿重建（Level-2 Market-By-Price 和 Level-3 Market-By-Order）、逐笔成交数据、队列位置模拟、馈送延迟和订单延迟建模。这是该框架的核心竞争力。"
+  },
+  "integration": {
+    "integration_method": "与 NT8 集成方式：1) 从 NT8 或其他数据源获取完整的 tick 级订单簿数据；2) 转换为 HftBacktest 支持的数据格式；3) 在 HftBacktest 中编写高频策略并运行回测；4) 导出交易记录和绩效数据；5) 通过 NT8 Trade Performance 或自定义工具分析结果。注意：HftBacktest 需要的数据精度（全订单簿）远超 NT8 标准数据导出能力。",
+    "data_format": "自定义二进制格式为主，也支持通过 Python 接口进行数据转换",
+    "bidirectional": "不支持与 NT8 的双向通信",
+    "serialization_overhead": "[不确定] 使用自定义二进制格式存储高频数据，序列化效率较高。具体性能数据未公开。"
+  },
+  "ecosystem": {
+    "dev_effort": "集成到 NT8 数据分析流程约 3-5 人周（含数据格式转换、策略开发、延迟模型配置等）。高频策略本身的开发复杂度较高。",
+    "maintenance": "中等维护难度。项目活跃开发中，API 可能变化。不依赖 NT8 更新。",
+    "ecosystem_maturity": "中等。有 crates.io 发布和 ReadTheDocs 文档，提供实战示例（Binance/Bybit）。但仍处于初始开发阶段。",
+    "community_activity": "[不确定] GitHub 仓库 nkaz001/hftbacktest，有 PyPI 发布（hftbacktest），有 ReadTheDocs 文档。具体 stars 数和活跃度需实时查询。",
+    "python_binding": "提供 Python 绑定。早期使用 Numba JIT，新功能正在迁移到 Rust 实现并通过 Python 接口调用。",
+    "live_trading_support": "部分支持。可使用相同的算法代码运行实盘交易机器人，支持 Binance Futures 和 Bybit（仅 Rust 版本）。但实盘功能尚未经过全面测试。",
+    "nt8_version_compatibility": "不适用，与 NT8 无直接关系"
+  },
+  "architecture": {
+    "event_model": "事件驱动 + 市场回放。基于完整 tick 数据的市场回放模型，支持自定义时间间隔或基于数据馈送/订单接收的事件触发。核心特色是馈送延迟和订单延迟的精确建模，以及订单队列位置的仿真。",
+    "fault_tolerance": "基础级别。作为回测框架，主要关注仿真精度而非生产级容错。数据缺失处理和异常订单处理能力需具体测试确认。"
+  },
+  "uncertain": [
+    "backtest_speed_benchmark",
+    "serialization_overhead",
+    "community_activity"
+  ]
+}

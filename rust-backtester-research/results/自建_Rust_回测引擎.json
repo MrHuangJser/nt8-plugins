@@ -1,0 +1,38 @@
+{
+  "name": "自建 Rust 回测引擎",
+  "category": "backtest_engine",
+  "description": "从零构建完全自定义的 Rust 回测引擎，利用 Rust 的零成本抽象、内存安全和高性能特性，实现 tick 级事件驱动回测。可参考现有开源框架（NautilusTrader、hftbacktest、barter-rs、rust_bt）的架构设计。",
+
+  "feasibility": "高 - Rust 语言特性（零成本抽象、无 GC、SIMD 支持）非常适合构建高性能回测引擎；已有多个成功的开源实现可参考",
+  "complexity": "高 - 从零构建需覆盖数据加载、事件引擎、订单匹配、持仓管理、风控、统计分析等完整模块；但可渐进式开发",
+  "nt8_api_support": "不适用 - 自建引擎独立于 NT8，仅在数据获取和结果展示环节与 NT8 交互",
+  "limitations": "1. 开发周期较长，最小可用版本也需 2-4 周；2. 订单匹配引擎（特别是限价单队列模拟）实现复杂度高；3. 需自行实现滑点模型、手续费模型、保证金计算等；4. 缺乏现成的可视化界面，需集成第三方图表库或回传 NT8 展示；5. 调试难度较大，需要与已知回测结果对比验证准确性；6. 期货合约续期处理（rollover）需特殊逻辑",
+
+  "multi_thread_support": "是 - Rust 的所有权系统和 Send/Sync trait 天然保证线程安全，支持无锁并发编程",
+  "parallelism_model": "全面并行支持：1. 参数优化并行（rayon 并行迭代器，不同参数组合并行回测）；2. 多品种并行（独立品种数据流并行处理）；3. SIMD（通过 std::simd 或 packed_simd 加速指标计算和数据处理）；4. 异步 I/O（tokio 异步运行时处理数据加载和网络通信）",
+  "latency": "极低 - 纯内存计算，无网络/IPC 开销；事件处理延迟在纳秒级别",
+  "throughput": "极高 - 参考 hftbacktest 和 NautilusTrader 的性能表现，tick 级回测可达数千万事件/秒",
+  "memory_footprint": "极低 - Rust 无 GC 且支持零拷贝数据结构；可精确控制内存分配策略；支持 mmap 方式加载大型数据文件",
+  "backtest_speed_benchmark": "参考值：NautilusTrader（Rust 核心）宣称比纯 Python 回测引擎快 100-1000x；hftbacktest 支持纳秒级时间分辨率的 HFT 回测；自建引擎性能应在同一量级",
+
+  "data_granularity": "tick - 可支持任意粒度，从纳秒级 tick 到日线级别",
+  "data_fidelity": "完全自定义 - 可支持任意数据字段，包括 bid/ask、多层订单簿深度、成交量分布、隐含波动率等",
+
+  "integration_method": "1. 数据输入：通过上述数据获取方案（Databento SDK / NT8 导出 / Rithmic API）获取数据存入本地（Parquet/Arrow/自定义二进制）；2. 回测执行：Rust 引擎加载数据、运行策略、生成交易记录；3. 结果输出：将交易记录和统计指标输出为 CSV/JSON，可通过 NT8 AddOn 导入展示，或使用 Web 前端可视化",
+  "data_format": "输入支持：CSV / Parquet / Arrow / 自定义二进制；输出：CSV / JSON / Parquet",
+  "bidirectional": "可实现 - 通过 Socket/管道与 NT8 双向通信，但非回测引擎核心功能",
+  "serialization_overhead": "极低 - 使用 Arrow/Parquet 格式可实现零拷贝数据加载；内部数据结构无需序列化",
+
+  "dev_effort": "最小可用版本（MVP）：3-4 人周（事件引擎 + 市价单匹配 + 基础统计）；完整版本：8-12 人周（含限价单队列模拟、多品种、风控、报告生成）",
+  "maintenance": "低 - 自有代码完全可控，无第三方依赖版本更新风险（核心逻辑）",
+  "ecosystem_maturity": "Rust 回测生态正在快速发展：NautilusTrader 2.x（Rust 核心 + Python 策略层）、hftbacktest（纯 Rust HFT 回测）、barter-rs（事件驱动框架）均为活跃项目",
+  "community_activity": "NautilusTrader：GitHub 4k+ stars，每周活跃提交；hftbacktest：1k+ stars，作者持续更新；barter-rs：500+ stars，活跃开发中；rust_bt：较新项目，star数较少",
+  "python_binding": "可选实现 - 通过 PyO3 提供 Python 绑定，允许用 Python 编写策略同时享受 Rust 引擎性能（NautilusTrader 即采用此架构）",
+  "live_trading_support": "可扩展 - 事件驱动架构天然支持从回测切换到实盘，只需替换数据源和订单执行层；barter-rs 和 NautilusTrader 均已实现此功能",
+  "nt8_version_compatibility": "不适用 - 独立引擎，不依赖 NT8 版本",
+
+  "event_model": "事件驱动（推荐）：1. 回调式：最简单，每个 tick/bar 触发策略回调（rust_bt 采用）；2. Actor 模型：独立的策略/数据/执行 Actor 通过消息传递通信（NautilusTrader 采用）；3. ECS（Entity Component System）：将策略拆分为组件和系统，适合大规模多策略并行（实验性方案）",
+  "fault_tolerance": "完全自定义：1. 断点续跑：可通过序列化引擎状态实现；2. 数据缺失处理：可配置跳过/插值/报错策略；3. 异常订单处理：自定义风控规则拦截异常订单；4. Rust 的类型系统和 Result 类型天然减少运行时错误",
+
+  "uncertain": ["community_activity"]
+}

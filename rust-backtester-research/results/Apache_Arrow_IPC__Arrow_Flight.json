@@ -1,0 +1,41 @@
+{
+  "name": "Apache Arrow IPC / Arrow Flight",
+  "category": "communication",
+  "description": "基于 Apache Arrow 列式内存格式的跨进程数据交换方案。Arrow IPC 通过共享内存或文件实现零拷贝数据传输；Arrow Flight 基于 gRPC 提供高性能数据服务协议。Rust 端使用 arrow-rs（Apache 官方 Rust 实现），C# 端使用 Apache.Arrow NuGet 包。适用于大批量金融时序数据的高效传输。",
+
+  "feasibility": "中到高——Arrow 技术本身成熟（大数据生态核心组件），但在 NT8 C#/.NET Framework 4.8 环境下的 Arrow 库支持需要验证。",
+  "complexity": "中到高——需要理解 Arrow 列式内存布局、Schema 定义、IPC 消息格式。Arrow Flight 还需要管理 gRPC 服务。比 CSV/SQLite 方案复杂度显著更高。",
+  "nt8_api_support": "不支持——NT8 无内置 Arrow 支持。需通过 AddOn 引入 Apache.Arrow NuGet 包，并可能面临 .NET Framework 4.8 兼容性问题。",
+  "limitations": "1. Apache.Arrow C# 包主要针对 .NET Standard 2.0/.NET Core，在 .NET Framework 4.8 上可能有兼容性问题；2. Arrow 列式格式对单行随机访问效率低（优势在批量列式处理）；3. Arrow Flight 依赖 gRPC，在 NT8 中存在与 gRPC 方案相同的 .NET Framework 限制；4. 学习曲线陡峭——列式内存模型与传统行式思维差异大；5. 对于小批量数据，Arrow 的 Schema 元数据开销比例较大；6. 共享内存 IPC 在 Windows 上的实现（Memory Mapped Files）需要额外开发。",
+
+  "multi_thread_support": "支持——Arrow 数据结构天然支持并行处理（列式布局利于 SIMD 和多线程列并行）。arrow-rs 内部使用多线程进行计算。",
+  "parallelism_model": "列并行 + SIMD——Arrow 列式格式天然适合对同一列数据进行并行计算。支持分区并行处理不同数据块（RecordBatch 级别）。arrow-rs 利用 SIMD 指令加速向量运算。",
+  "latency": "Arrow IPC（共享内存）：极低，接近零拷贝，微秒级。Arrow Flight（基于 gRPC）：约 0.1-1 毫秒。文件方式 IPC：取决于文件大小，毫秒到秒级。",
+  "throughput": "极高——Arrow IPC 共享内存方式可达内存带宽（10+ GB/s）。Arrow Flight 在本地可达 1-5 GB/s。列式格式对分析查询（聚合、过滤）特别高效。",
+  "memory_footprint": "中——Arrow 使用固定大小的内存缓冲区，内存布局紧凑。但列式格式会为每列分配独立缓冲区，小数据量时可能比行式格式占用更多内存（Schema 和缓冲区对齐开销）。",
+  "backtest_speed_benchmark": "[不确定] Arrow 本身不是回测引擎。数据传输层参考：Arrow IPC 可在毫秒内传输数百万行数据。Polars（基于 Arrow 的 DataFrame 库）处理金融时序数据的速度远超 Pandas。",
+
+  "data_granularity": "支持任意粒度——Arrow Schema 可定义任意精度的时间戳和数据字段。",
+  "data_fidelity": "高——Arrow 支持丰富的数据类型（Timestamp 纳秒精度、Decimal128、Float64、嵌套类型等），可完整表达金融数据的所有字段且无精度损失。",
+
+  "integration_method": "1. 定义 Arrow Schema（字段名、类型）作为数据契约；2. Rust 端：使用 arrow-rs 构建 RecordBatch，通过 Arrow IPC FileWriter 写入文件或通过 arrow-flight crate 启动 Flight 服务；3. C#/NT8 端：通过 Apache.Arrow NuGet 包读取 IPC 文件或连接 Flight 服务（需验证 .NET Framework 兼容性）；4. 共享内存方式：使用 Memory Mapped Files 在两个进程间共享 Arrow 缓冲区。",
+  "data_format": "Apache Arrow IPC 格式（二进制，列式布局）。也可使用 Arrow Feather V2 文件格式或 Parquet 格式（Arrow 生态工具可直接读写 Parquet）。",
+  "bidirectional": "支持——Arrow Flight 基于 gRPC 双向流，天然支持双向通信。IPC 文件方式也可双向（两端各写各的文件/共享内存段）。",
+  "serialization_overhead": "极低到零——Arrow IPC 的核心优势是零拷贝：发送端的内存布局与接收端完全相同，无需序列化/反序列化转换。仅有 Schema 元数据的少量开销。这是所有通信方案中序列化开销最低的。",
+
+  "dev_effort": "Arrow IPC 文件方式：3-5 人天。Arrow Flight 服务：1-2 人周。解决 NT8 .NET Framework 兼容性可能额外 2-3 人天。",
+  "maintenance": "中——Arrow 格式版本向后兼容，但 C# 库更新可能引入 API 变更。需关注 Apache.Arrow NuGet 包对 .NET Framework 的持续支持。",
+  "ecosystem_maturity": "高（整体生态）/ 中（C# 生态）——Arrow 在大数据/Python/Rust 生态中极其成熟，但 C# 实现相对较新，功能覆盖不如 Python/Rust 完整。",
+  "community_activity": "arrow-rs: GitHub 2.5k+ stars，Apache 基金会维护，每月发布新版本。Apache.Arrow C#: 作为 Apache Arrow 主仓库的子项目维护，更新相对缓慢。整个 Arrow 项目: 14k+ stars。",
+  "python_binding": "天然支持——PyArrow 是 Arrow 生态最成熟的绑定，Pandas 2.0 已原生支持 Arrow 后端。可直接与 Rust Arrow 数据互通。",
+  "live_trading_support": "支持——Arrow Flight 低延迟适合实盘数据传输。Arrow IPC 共享内存方式延迟极低，也适合实盘场景。",
+  "nt8_version_compatibility": "[不确定] Apache.Arrow C# NuGet 包对 .NET Framework 4.8 的兼容性需要实际测试验证。未来 NinjaTrader Desktop 若迁移到 .NET 8+ 则兼容性会更好。",
+
+  "event_model": "批量处理 / 流式——Arrow RecordBatch 天然适合批量数据处理。Arrow Flight 支持流式传输（DoGet/DoPut），可映射到事件驱动模型。",
+  "fault_tolerance": "中等——Arrow IPC 文件写入是原子操作（完整 RecordBatch）。Arrow Flight 继承 gRPC 的错误处理机制。共享内存方式需要自行处理进程崩溃后的清理。",
+
+  "uncertain": [
+    "backtest_speed_benchmark",
+    "nt8_version_compatibility"
+  ]
+}

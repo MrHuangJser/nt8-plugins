@@ -1,0 +1,114 @@
+topic: "使用 Rust 构建高性能回测引擎，集成 NinjaTrader 8 数据源与分析面板"
+description: >
+  调研从 NT8 获取秒/tick 级历史数据、用 Rust 多线程回测引擎加速策略回测、
+  并将结果回传 NT8 分析面板的完整技术方案。
+
+items:
+  # === NT8 数据获取方案 ===
+  - name: "NT8 AddOn (NinjaScript AddOn)"
+    description: "NT8 官方插件开发框架，可通过 BarsRequest/MarketData API 访问历史数据"
+    category: data_acquisition
+
+  - name: "NT8 Data Export (Historical Data Window)"
+    description: "NT8 内置历史数据导出功能，支持导出为 CSV/文本文件"
+    category: data_acquisition
+
+  - name: "NT8 Connection Sharing"
+    description: "NT8 作为数据中继，通过 ATI (Automated Trading Interface) 共享连接给外部程序"
+    category: data_acquisition
+
+  - name: "直接对接数据源 (Rithmic/CQG/Kinetick)"
+    description: "绕过 NT8，直接使用数据供应商的 SDK/API 获取历史数据"
+    category: data_acquisition
+
+  - name: "Tradovate/NinjaTrader Trade API (REST + WebSocket)"
+    description: "NT收购Tradovate后推出的官方API，REST+WebSocket接口，标准账户100 req/s"
+    category: data_acquisition
+
+  - name: "NT8 Market Replay 数据文件解析"
+    description: "解析NT8独有的Market Replay二进制文件，包含完整tick级bid/ask/last数据"
+    category: data_acquisition
+
+  - name: "第三方 Tick 数据供应商 (TickData/Databento/Polygon)"
+    description: "完全绕过NT8，从专业tick数据供应商购买高精度历史数据"
+    category: data_acquisition
+
+  # === Rust 回测框架/引擎 ===
+  - name: "自建 Rust 回测引擎"
+    description: "从零构建完全自定义的 Rust 回测引擎，最大灵活性"
+    category: backtest_engine
+
+  - name: "RustQuant"
+    description: "Rust 量化金融库，提供定价/风险/统计等模块，可作为回测组件"
+    category: backtest_engine
+
+  - name: "Barter-rs"
+    description: "Rust 事件驱动回测框架，支持回测与实盘代码一致性"
+    category: backtest_engine
+
+  - name: "NautilusTrader"
+    description: "Rust核心回测引擎（已从Python/Cython转为Rust-native），提供Python API层"
+    category: backtest_engine
+
+  - name: "HftBacktest"
+    description: "Rust高频交易回测框架，支持全订单簿回放、队列位置模拟和延迟建模"
+    category: backtest_engine
+
+  - name: "Qust"
+    description: "Rust回测和实盘交易库，提供可扩展策略构建方式"
+    category: backtest_engine
+
+  - name: "backtest_rs"
+    description: "Rust事件驱动回测引擎，专注tick-by-tick策略模拟和延迟模拟"
+    category: backtest_engine
+
+  # === 结果回传与分析 ===
+  - name: "NT8 Trade Performance 面板"
+    description: "NT8 内置策略分析功能，展示盈亏曲线、胜率、最大回撤等"
+    category: result_analysis
+
+  - name: "NT8 Custom Import (ImportType API)"
+    description: "通过 AddOn 开发 ImportType 接口，将外部交易记录导入 NT8 分析"
+    category: result_analysis
+
+  - name: "NT8 Strategy Analyzer 扩展"
+    description: "NT8内置Strategy Analyzer支持Backtest/Optimize/Walk-Forward，可自定义Performance Display"
+    category: result_analysis
+
+  - name: "自建分析面板 (Web/Desktop)"
+    description: "独立于 NT8 的分析工具，如基于 Web 的 Dash/Plotly 或桌面 GUI"
+    category: result_analysis
+
+  - name: "第三方分析工具 (Trade Analyzer for NT8 等)"
+    description: "NT8生态内第三方分析插件，如MAS Capital Trade Analyzer，支持CSV导出和Web报告"
+    category: result_analysis
+
+  # === 跨语言通信方案 ===
+  - name: "FFI (C ABI) + csbindgen"
+    description: "Rust编译为C动态库，NT8 C#通过P/Invoke调用；csbindgen可自动生成绑定代码"
+    category: communication
+
+  - name: "gRPC/Protobuf"
+    description: "跨进程 RPC 通信，强类型接口定义，双向流支持"
+    category: communication
+
+  - name: "共享文件/数据库 (SQLite/CSV)"
+    description: "通过中间文件或数据库交换数据，实现最简单"
+    category: communication
+
+  - name: "Apache Arrow IPC / Arrow Flight"
+    description: "Arrow列式内存格式跨进程零拷贝数据交换，Rust和C#均有成熟库支持"
+    category: communication
+
+  - name: "Named Pipes / TCP Socket"
+    description: "本地进程间通信，低延迟，适合实时数据流"
+    category: communication
+
+  - name: "NT8 AddOn WebSocket Server"
+    description: "在NT8 AddOn中启动WebSocket服务器，外部程序通过WebSocket连接交互"
+    category: communication
+
+execution:
+  batch_size: 3          # 并行 agent 数量
+  items_per_agent: 8     # 每个 agent 调研的 items 数
+  output_dir: "./rust-backtester-research/results"

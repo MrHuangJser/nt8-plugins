@@ -59,6 +59,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private double _stopFillPrice;
 		private bool   _addOn1Filled;
 		private bool   _addOn2Filled;
+		private bool   _pendingBEUpdate;
 
 		#endregion
 
@@ -68,7 +69,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			{
 				Description					= @"MotherBar突破确认策略 - 基于Confirmation Signal #1的Stop+Limit双腿入场";
 				Name						= "MotherBarBreakout";
-				Calculate					= Calculate.OnBarClose;
+				Calculate					= Calculate.OnPriceChange;
 				EntriesPerDirection			= 3;
 				EntryHandling				= EntryHandling.UniqueEntries;
 				IsExitOnSessionCloseStrategy = false;
@@ -119,10 +120,24 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 		protected override void OnBarUpdate()
 		{
+			if (BarsInProgress != 0)
+				return;
+
 			if (CurrentBar < BarsRequiredToTrade)
 				return;
 
 			if (!EnableBacktest && State == State.Historical)
+				return;
+
+			// 盘中及时处理待执行的 BE 更新（确保 SetProfitTarget 修改被框架提交）
+			if (_pendingBEUpdate && _state == MBBOState.EntryFilled)
+			{
+				_pendingBEUpdate = false;
+				UpdateAllTPsToBreakEven();
+			}
+
+			// 原有 bar-close 逻辑只在新K线第一个 tick 执行
+			if (!IsFirstTickOfBar)
 				return;
 
 			bool inSession = IsInTradeSession();
@@ -169,7 +184,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			}
 
 			// 可视化
-			if (ShowMBLines && _state != MBBOState.Idle)
+			if (ShowMBLines && _state != MBBOState.Idle && _mbFormBar > 0)
 				UpdateVisualization();
 		}
 
@@ -395,6 +410,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 				SetProfitTarget("MB_BO_Short_AddOn", CalculationMode.Price, bePrice);
 				SetProfitTarget("MB_BO_Short_AddOn2", CalculationMode.Price, bePrice);
 			}
+
+			_pendingBEUpdate = true;
 		}
 
 		#endregion
@@ -689,6 +706,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			_stopFillPrice   = 0;
 			_addOn1Filled    = false;
 			_addOn2Filled    = false;
+			_pendingBEUpdate = false;
 		}
 
 		#endregion
@@ -797,7 +815,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private void UpdateVisualization()
 		{
 			int startBar = CurrentBar - _mbFormBar;
+			if (startBar < 0 || startBar > CurrentBar)
+				return;
 			int endBar   = Math.Max(startBar - MBLineLength, 0);
+			endBar = Math.Min(endBar, CurrentBar);
 			string prefix = "MBBO" + _mbId + "_";
 
 			// MB主体

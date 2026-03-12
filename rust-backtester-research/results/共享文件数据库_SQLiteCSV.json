@@ -1,0 +1,38 @@
+{
+  "name": "共享文件/数据库 (SQLite/CSV)",
+  "category": "communication",
+  "description": "通过中间文件（CSV/JSON）或嵌入式数据库（SQLite）在 NT8 和 Rust 回测引擎之间交换数据。NT8 端通过 NinjaScript 将历史数据导出为文件或写入 SQLite，Rust 端读取后进行回测，结果再写回文件/数据库供 NT8 或分析工具读取。实现最简单，无需额外通信框架。",
+
+  "feasibility": "高——CSV/SQLite 都是极其成熟的技术，Rust 和 C# 均有完善的库支持，无任何技术风险。",
+  "complexity": "低——无需学习额外框架或协议，文件读写和 SQL 操作是基础技能。",
+  "nt8_api_support": "间接支持——NT8 NinjaScript 支持 System.IO 文件操作和 ADO.NET 数据库访问。可在 AddOn 或 Strategy 中直接读写 CSV/SQLite。NT8 自身的历史数据也可通过 Tools > Export 导出为 CSV。",
+  "limitations": "1. 非实时——文件 I/O 有延迟，不适合毫秒级实时通信；2. 并发访问问题——SQLite 写入时会锁定数据库（WAL 模式可缓解），CSV 无并发控制；3. 大文件性能差——数百 MB 的 CSV 文件解析缓慢；4. 数据类型信息丢失——CSV 所有数据为字符串，需要解析转换；5. 无变更通知机制——需要轮询检测新数据；6. 磁盘 I/O 可能成为瓶颈（SSD 上可缓解）。",
+
+  "multi_thread_support": "有限——SQLite 支持多读单写（WAL 模式下支持并发读取）；CSV 文件无内置并发控制，需要自行实现锁机制。",
+  "parallelism_model": "文件粒度的并行——可按品种或时间段分文件，不同文件并行读写。SQLite 支持多连接并发读取。写入端通常为串行。",
+  "latency": "高——文件方式延迟在 10ms-1s 级别（取决于文件大小和磁盘速度）。SQLite 单次查询延迟 0.1-10ms。不适合实时通信。",
+  "throughput": "中等——CSV：解析速度约 100-500 MB/s（Rust csv crate），受限于文本解析开销。SQLite：批量插入约 10-50 万行/秒（使用事务），查询速度取决于索引和数据量。",
+  "memory_footprint": "低到中——流式读取 CSV 内存占用极低；SQLite 默认缓存约 2 MB，可配置。整文件加载 CSV 时内存占用等于文件大小的 2-5 倍（文本 + 解析后对象）。",
+  "backtest_speed_benchmark": "不适用——本方案为数据交换方式，不影响回测计算速度。数据加载时间：1 GB CSV 约 2-10 秒（Rust），100 万行 SQLite 查询约 0.5-2 秒。",
+
+  "data_granularity": "支持任意粒度——CSV/SQLite 可存储任意精度数据。",
+  "data_fidelity": "中——CSV 会丢失数据类型信息，浮点精度取决于文本格式化方式。SQLite 支持 INTEGER/REAL/TEXT/BLOB 基本类型，可保留数值精度。两者都可存储 bid/ask/volume 等字段。",
+
+  "integration_method": "1. NT8 端：在 NinjaScript（AddOn/Strategy）中使用 StreamWriter 写 CSV 或 System.Data.SQLite 写数据库；2. Rust 端：使用 csv crate 读取 CSV 或 rusqlite crate 读取 SQLite；3. 约定文件/数据库路径和数据格式（表结构/列名）；4. 可选：使用文件系统监视（FileSystemWatcher/.NET，notify crate/Rust）实现文件变更通知。",
+  "data_format": "CSV（纯文本，逗号/制表符分隔）或 SQLite（嵌入式关系数据库，单文件存储）。也可考虑 JSON Lines 格式作为替代。",
+  "bidirectional": "支持——双方都可读写同一文件/数据库。但需要约定读写协议避免冲突（如使用不同的文件/表，或读写锁机制）。",
+  "serialization_overhead": "CSV：较高——文本格式的序列化/反序列化需要大量字符串解析和格式化。数值转字符串及反向转换有 CPU 开销。SQLite：中等——二进制存储减少了解析开销，但 SQL 解析和 B-Tree 查找有固定开销。",
+
+  "dev_effort": "1-2 人天——CSV 方案极其简单；SQLite 方案需额外设计表结构，约 2-3 人天。",
+  "maintenance": "低——CSV/SQLite 格式极其稳定，几乎不需要维护。唯一需要关注的是数据格式（列名/表结构）的变更管理。",
+  "ecosystem_maturity": "极高——CSV 是通用数据交换格式，SQLite 是全球部署量最大的数据库。Rust csv crate 和 rusqlite crate 都非常成熟。",
+  "community_activity": "rusqlite: GitHub 2.9k+ stars，活跃维护。csv crate (BurntSushi): 1.7k+ stars，Rust 生态标准库。SQLite 本身由 D. Richard Hipp 持续维护超过 20 年。",
+  "python_binding": "天然支持——Python 内置 csv 和 sqlite3 模块，可直接读写相同的文件/数据库。",
+  "live_trading_support": "有限——文件/数据库方式延迟较高，不适合低延迟实盘交易信号传递。可用于非实时的交易日志记录和批量数据交换。",
+  "nt8_version_compatibility": "完全兼容——文件 I/O 和 SQLite 不依赖 NT8 特定版本。所有 NT8 版本的 NinjaScript 都支持 System.IO。",
+
+  "event_model": "请求-响应 / 批量处理——无事件驱动机制。数据交换为批量读写模式。可通过文件监视（FileSystemWatcher）模拟事件通知。",
+  "fault_tolerance": "中等——SQLite 支持事务保证数据一致性（ACID），写入失败可回滚。CSV 无事务支持，写入中断可能导致数据损坏。可通过临时文件 + 原子重命名避免。",
+
+  "uncertain": []
+}

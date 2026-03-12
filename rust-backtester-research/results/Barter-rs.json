@@ -1,0 +1,49 @@
+{
+  "basic_info": {
+    "name": "Barter-rs",
+    "category": "backtest_engine",
+    "description": "Rust 事件驱动回测框架，支持回测与实盘代码一致性。提供模块化生态系统，包含交易引擎（Barter）、市场数据流（Barter-Data）、订单执行（Barter-Execution）、金融工具定义（Barter-Instrument）和集成框架（Barter-Integration）。支持高性能实盘、模拟盘和回测交易。"
+  },
+  "feasibility": {
+    "feasibility": "高",
+    "complexity": "中",
+    "nt8_api_support": "NT8 API 不原生支持该方案。Barter-rs 是独立的 Rust 框架，需要通过自定义数据管道（CSV/JSON导出导入）与 NT8 集成。",
+    "limitations": "项目仍在积极开发中，API 可能有变化；主要面向加密货币市场，传统期货市场适配需自行开发；文档虽在改善但仍有提升空间；社区规模相对较小。"
+  },
+  "performance": {
+    "multi_thread_support": "支持多线程。多线程架构设计，利用 Tokio 异步运行时处理 I/O，原生 Rust 最小化内存分配。",
+    "parallelism_model": "多品种并行 + 异步 I/O。使用 Tokio 异步运行时实现并发市场数据流处理和订单执行；支持高效运行数千个并发回测；数据导向的状态管理系统使用索引直接查找实现 O(1) 常数级性能。",
+    "latency": "不适用（非通信方案）",
+    "throughput": "高吞吐量。原生 Rust 实现，最小化内存分配，缓存友好的集中式状态管理，适合处理 tick 级数据。",
+    "memory_footprint": "低。使用内存高效的数据结构，O(1) 索引查找的状态管理，无 GC 开销。",
+    "backtest_speed_benchmark": "[不确定] 无公开的回测速度基准数据。官方强调支持高效运行数千个并发回测，但未给出具体数据。"
+  },
+  "data_quality": {
+    "data_granularity": "tick 级别。支持 tick 数据流和 bar 数据处理。",
+    "data_fidelity": "支持 bid/ask 价格流、成交数据。通过 Barter-Data 模块可接入多个交易所的实时市场数据。订单簿深度支持程度取决于数据源接入。"
+  },
+  "integration": {
+    "integration_method": "与 NT8 集成需要自定义数据管道：1) 从 NT8 导出历史数据为 CSV/JSON；2) 在 Barter-rs 中加载数据并运行回测；3) 将回测结果（交易记录、绩效指标）导出为 CSV/JSON；4) 通过 NT8 的 Trade Performance 面板或自定义 ImportType 导入分析结果。",
+    "data_format": "支持 CSV、JSON 等标准格式",
+    "bidirectional": "不直接支持与 NT8 的双向通信，需要通过文件中转",
+    "serialization_overhead": "[不确定] 未有具体序列化性能对比数据。标准 CSV/JSON 格式的序列化开销在大数据量下可能成为瓶颈，可考虑使用二进制格式优化。"
+  },
+  "ecosystem": {
+    "dev_effort": "集成到 NT8 数据分析流程约 2-3 人周（含数据管道开发和策略移植）",
+    "maintenance": "中等维护难度。框架本身更新较活跃（2026年2月仍有更新），需关注 API 变化。不依赖 NT8 更新。",
+    "ecosystem_maturity": "中等。MIT 许可证开源，有完整的 crate 生态（5个子 crate），文档和示例在持续完善中。",
+    "community_activity": "[不确定] GitHub 仓库 barter-rs/barter-rs，2026年2月15日有更新记录，项目活跃。具体 stars 数需实时查询。",
+    "python_binding": "不提供 Python 绑定，纯 Rust 实现",
+    "live_trading_support": "支持。回测与实盘使用相同代码架构，支持从回测无缝切换到实盘交易。提供 LiveBroker、LiveData 等实盘组件。",
+    "nt8_version_compatibility": "不适用，与 NT8 无直接关系"
+  },
+  "architecture": {
+    "event_model": "事件驱动架构。模块化设计，插件化的 Strategy 和 RiskManager 组件，支持 MarketMaking、StatArb、HFT 等多种策略类型。强类型、线程安全。",
+    "fault_tolerance": "通过 Rust 类型系统保证内存安全和线程安全。广泛的测试覆盖。具体断点续跑和数据缺失处理能力需查阅文档确认。"
+  },
+  "uncertain": [
+    "backtest_speed_benchmark",
+    "serialization_overhead",
+    "community_activity"
+  ]
+}

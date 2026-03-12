@@ -1,0 +1,40 @@
+{
+  "name": "自建分析面板 (Web/Desktop)",
+  "category": "result_analysis",
+  "description": "独立于 NT8 的分析工具，通过 Web 技术栈（如 Python Dash/Plotly、Streamlit）或桌面 GUI 框架（如 Rust egui/Tauri、C# WPF）构建自定义分析面板，用于展示回测结果、权益曲线、风险指标、交易明细等。数据来源可以是 NT8 导出的 CSV/数据库文件或 Rust 回测引擎直接输出的结果。",
+
+  "feasibility": "高——技术成熟，Python 数据可视化生态极其丰富，Rust 也有 egui/plotters 等选择。关键在于数据管道的搭建。",
+  "complexity": "中——需要设计数据管道（从回测引擎到分析面板）、前端界面、交互逻辑。Web 方案（Dash/Streamlit）开发速度快；桌面方案（Tauri/egui）性能更好但开发量更大。",
+  "nt8_api_support": "间接支持——NT8 可通过 NinjaScript 导出交易数据为 CSV 或写入数据库，但无官方 API 直接对接外部分析面板。",
+  "limitations": "1. 需要自行维护数据管道和格式转换；2. 与 NT8 实时联动需额外实现通信层；3. Web 方案对大数据量（百万级 tick）的前端渲染性能有限，需要采样或分页；4. 自建方案需要持续维护，跟随分析需求迭代；5. 多用户协作需额外考虑部署方案。",
+
+  "multi_thread_support": "支持——分析计算可充分利用多线程（Python 可用 multiprocessing/Dask，Rust 天然多线程）。前端渲染通常单线程但支持异步加载。",
+  "parallelism_model": "分析计算层可采用多品种并行、多指标并行计算；前端渲染为异步模型（Web 为事件循环，桌面 GUI 为消息循环 + 后台线程）。",
+  "latency": "取决于数据管道。本地文件/数据库方式延迟在毫秒级；若通过网络传输则取决于数据量和网络条件。",
+  "throughput": "Web 方案：Plotly 在浏览器端可高效渲染数万个数据点，超过 10 万点需降采样。桌面方案（egui/plotters）可处理更大数据量。后端数据处理层吞吐量取决于语言选择（Rust > Python）。",
+  "memory_footprint": "可控——Web 方案前端内存取决于浏览器，后端可按需加载。桌面方案内存占用取决于数据加载策略。Rust 方案内存效率最优。",
+  "backtest_speed_benchmark": "不适用——本方案为结果分析工具，不执行回测。分析面板加载和渲染速度：Dash/Plotly 典型首次加载 1-3 秒，交互响应 100-500ms。",
+
+  "data_granularity": "支持任意粒度——取决于输入数据，从 tick 到日线均可处理和展示。",
+  "data_fidelity": "取决于数据源——可展示所有传入的数据字段。若从 NT8 导出，则受 NT8 导出格式限制；若从 Rust 回测引擎直接输出，可自定义任意字段。",
+
+  "integration_method": "1. 数据导入：从 CSV/SQLite/Parquet 文件读取回测结果，或通过 API 实时接收；2. 分析处理：使用 Pandas/Polars 等进行统计计算；3. 可视化渲染：Dash/Plotly 创建交互式图表（权益曲线、回撤、持仓分析等）；4. 部署：Web 方案可本地或服务器部署，桌面方案打包为独立应用。",
+  "data_format": "灵活支持 CSV、JSON、SQLite、Parquet、Arrow 等格式。推荐使用 Parquet 或 Arrow 格式以获得最佳性能。",
+  "bidirectional": "可实现——Web 方案可通过 WebSocket 实现双向通信（接收数据 + 发送控制指令）；文件方案通常为单向（读取结果）。",
+  "serialization_overhead": "取决于数据格式。CSV 序列化开销大（文本解析）；Parquet/Arrow 开销极小（列式二进制格式）；JSON 介于两者之间。对于百万行交易数据，Parquet 加载速度可比 CSV 快 10-50 倍。",
+
+  "dev_effort": "Web 方案（Dash/Streamlit）：3-5 人天可完成基础版；功能完善版 1-2 人周。桌面方案（Tauri/egui）：1-2 人周基础版，3-4 人周完善版。",
+  "maintenance": "中——需跟随分析需求迭代，但不依赖 NT8 更新。Python 库更新频繁但向后兼容性好。",
+  "ecosystem_maturity": "高——Dash/Plotly/Streamlit 等 Python 可视化框架极其成熟，文档完善，社区活跃。Rust egui 生态中等成熟度。",
+  "community_activity": "Plotly: GitHub 16k+ stars，持续活跃。Dash: 21k+ stars。Streamlit: 35k+ stars。egui: 22k+ stars。均为活跃维护项目。",
+  "python_binding": "Web 方案天然为 Python（Dash/Plotly/Streamlit）；桌面 Rust 方案不直接提供 Python 绑定但可通过 PyO3 桥接。",
+  "live_trading_support": "间接支持——分析面板可接入实盘数据流进行实时监控，但本身不执行交易。",
+  "nt8_version_compatibility": "不依赖 NT8 版本——独立应用，仅需数据格式兼容即可。",
+
+  "event_model": "不适用——分析面板为数据展示工具，非回测引擎。Web 方案采用回调式交互模型（Dash callbacks），桌面方案采用消息循环/即时模式渲染（egui）。",
+  "fault_tolerance": "可设计——数据加载失败可提示用户；支持增量加载避免内存溢出；Web 方案前后端分离天然具有一定容错能力。",
+
+  "uncertain": [
+    "community_activity"
+  ]
+}

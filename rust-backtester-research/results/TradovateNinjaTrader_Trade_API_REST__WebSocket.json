@@ -1,0 +1,38 @@
+{
+  "name": "Tradovate/NinjaTrader Trade API (REST + WebSocket)",
+  "category": "data_acquisition",
+  "description": "NinjaTrader 收购 Tradovate 后推出的官方 API，提供 REST 和 WebSocket 接口用于期货交易和市场数据获取。标准账户 100 req/s，Tradovate+ 账户 500 req/s，滚动小时限制 5000 req/hour。支持订单管理、账户查询、实时市场数据流。",
+
+  "feasibility": "高 - 官方维护的 REST + WebSocket API，文档完善（api.tradovate.com），有 OpenAPI 规范可用",
+  "complexity": "中 - 标准 REST/WebSocket 技术栈，Rust 生态有成熟的 HTTP 和 WebSocket 库（reqwest/tokio-tungstenite），集成难度不高",
+  "nt8_api_support": "官方 API - NinjaTrader 官方提供，需要 Tradovate 账户才能使用",
+  "limitations": "1. 速率限制：标准账户 100 req/s、5000 req/hour（滚动窗口），超限会被封锁 20-30 秒；2. 反复触发限制可能收到 P-ticket（处罚工单），导致 API 访问被长期限制或封禁；3. 历史数据 API 功能相对有限，主要面向交易执行；4. 需要 Tradovate 账户和可能的额外 API 访问费用；5. 数据范围受限于 Tradovate 平台支持的品种和交易所；6. WebSocket 连接有心跳和超时机制，需实现保活逻辑",
+
+  "multi_thread_support": "是 - REST API 天然支持并行请求（受限于速率限制）；WebSocket 支持异步消息处理",
+  "parallelism_model": "异步 + 多连接并行 - 可通过多个 WebSocket 连接订阅不同品种的实时数据；REST 请求可并发（需控制在速率限制内）",
+  "latency": "中 - 网络延迟取决于与 Tradovate 服务器的距离，通常数十毫秒级；WebSocket 实时推送延迟低于 REST 轮询",
+  "throughput": "中 - 受速率限制约束（100-500 req/s）；WebSocket 数据流吞吐量取决于订阅品种数量",
+  "memory_footprint": "低 - REST 无状态，WebSocket 连接内存占用极小",
+  "backtest_speed_benchmark": "不适用 - 此方案用于数据获取和交易执行",
+
+  "data_granularity": "tick - WebSocket 可接收实时 tick 数据流；REST API 可查询历史K线数据",
+  "data_fidelity": "中 - 提供 Last/Bid/Ask 实时报价和成交量；历史数据深度取决于 API 支持的查询范围",
+
+  "integration_method": "1. 注册 Tradovate 账户并申请 API 访问权限；2. 使用 OAuth2 获取 API Token；3. REST API 用于账户管理、订单操作和历史数据查询；4. WebSocket 连接用于实时市场数据订阅和订单状态推送；5. Rust 实现：使用 reqwest 发送 REST 请求，tokio-tungstenite 处理 WebSocket 连接",
+  "data_format": "JSON - REST API 返回 JSON，WebSocket 消息为 JSON 格式",
+  "bidirectional": "是 - 完全双向：REST 用于查询和操作，WebSocket 用于实时推送和指令发送",
+  "serialization_overhead": "低 - JSON 序列化/反序列化在 Rust 中非常高效（serde_json），但相比二进制格式仍有一定开销",
+
+  "dev_effort": "1-2 人周 - REST 客户端 3-5 天，WebSocket 客户端 3-5 天，含认证、错误处理和速率限制管理",
+  "maintenance": "低 - 官方维护的标准 REST API，版本更新通常向后兼容",
+  "ecosystem_maturity": "发展中 - Tradovate API 在期货社区中接受度逐渐提高，第三方工具如 FlowBots、PickMyTrade 等基于此 API 构建",
+  "community_activity": "活跃 - NinjaTrader 开发者社区（developer.ninjatrader.com）持续更新；第三方如 CrossTrade 提供了增强 API 封装；FlowBots 等自动化工具基于此 API",
+  "python_binding": "不适用 - REST/WebSocket API 语言无关",
+  "live_trading_support": "是 - API 原生支持实盘交易，包括订单提交、修改、取消和持仓管理",
+  "nt8_version_compatibility": "独立于 NT8 桌面版 - Tradovate API 是云端服务，不依赖本地 NT8 安装",
+
+  "event_model": "事件驱动 - WebSocket 推送模式，数据到达触发回调处理；REST 为请求-响应模式",
+  "fault_tolerance": "中 - 需实现 Token 自动刷新、WebSocket 断线重连、速率限制退避逻辑；API 服务器端有完善的错误码体系",
+
+  "uncertain": []
+}

@@ -1,0 +1,38 @@
+{
+  "name": "NT8 Data Export (Historical Data Window)",
+  "category": "data_acquisition",
+  "description": "NT8 内置历史数据导出功能，通过 Historical Data Window 的 Export 功能将已下载的历史数据导出为文本文件（.txt）。支持 Last、Bid、Ask 三种数据类型的分别导出，操作简单无需编程。",
+
+  "feasibility": "高 - NT8 内置功能，无需开发，开箱即用",
+  "complexity": "低 - 纯 GUI 操作，选择品种、时间范围和数据类型后一键导出",
+  "nt8_api_support": "完全支持 - 官方内置功能，HelpGuide 有详细操作说明",
+  "limitations": "1. 导出格式仅支持 .txt 文本文件，非标准 CSV（需手动处理分隔符）；2. 无法批量自动化导出，每次需手动操作；3. Bid 和 Ask 数据需分别导出为独立文件；4. 大量数据导出时速度较慢且可能导致界面无响应；5. 导出的时间精度取决于已下载数据的精度；6. 无法导出 Market Replay 数据",
+
+  "multi_thread_support": "否 - 单线程 GUI 操作，导出过程中 NT8 界面会阻塞",
+  "parallelism_model": "无 - 不支持任何并行化，只能逐个品种导出",
+  "latency": "不适用 - 离线文件导出，无实时通信需求",
+  "throughput": "低 - GUI 导出速度受限，大量 tick 数据导出可能需要数分钟到数十分钟",
+  "memory_footprint": "低 - 导出过程不会额外占用大量内存",
+  "backtest_speed_benchmark": "不适用 - 此方案仅用于数据导出",
+
+  "data_granularity": "tick - 支持 tick、分钟、日等 NT8 已下载的所有数据粒度",
+  "data_fidelity": "中高 - 支持 Last（成交价+量）、Bid、Ask 的分别导出，但需分开导出合并处理；不包含订单簿深度数据",
+
+  "integration_method": "1. 在 NT8 中打开 Historical Data Window（Control Center > Tools > Historical Data）；2. 选择品种和时间范围，下载数据；3. 切换到 Export 标签，选择数据类型（Last/Bid/Ask）和时间范围；4. 导出为 .txt 文件；5. 外部 Rust 程序解析 .txt 文件",
+  "data_format": "文本 .txt - 分号分隔，格式如 'yyyyMMdd HHmmss;price;volume'，Tick Replay 格式为 'yyyyMMdd HHmmss fffffff;last;bid;ask;volume'",
+  "bidirectional": "否 - 仅支持单向数据导出，无法回传结果到 NT8",
+  "serialization_overhead": "低 - 文本文件直接写入磁盘，Rust 端解析文本文件开销极小",
+
+  "dev_effort": "0.5 人天 - 仅需编写 Rust 端文本解析器，NT8 端无需开发",
+  "maintenance": "极低 - NT8 内置功能，几乎不需要维护",
+  "ecosystem_maturity": "成熟 - 官方内置功能，稳定可靠",
+  "community_activity": "论坛有大量导出相关讨论帖，第三方工具如 ChartToCSV 和 Aeromir Data Exporter 提供增强导出功能",
+  "python_binding": "不适用",
+  "live_trading_support": "不适用 - 纯数据导出方案",
+  "nt8_version_compatibility": "兼容所有 NT8 版本 - 内置功能，版本更新不影响",
+
+  "event_model": "不适用 - 非事件驱动，手动一次性导出",
+  "fault_tolerance": "低 - 导出失败需手动重试，无断点续传，大文件导出中断需从头开始",
+
+  "uncertain": []
+}

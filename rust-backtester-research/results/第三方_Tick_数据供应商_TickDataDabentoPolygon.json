@@ -1,0 +1,38 @@
+{
+  "name": "第三方 Tick 数据供应商 (TickData/Databento/Polygon)",
+  "category": "data_acquisition",
+  "description": "完全绕过 NT8，从专业 tick 数据供应商购买高精度历史数据。TickData（1984年成立）提供研究级清洗 tick 数据；Databento 提供现代化 API 和 Rust 原生 SDK；Polygon.io 提供 REST API 覆盖股票/期货/外汇等多资产类别。",
+
+  "feasibility": "高 - 三家供应商均为成熟商业服务，API/数据交付稳定可靠；Databento 有官方 Rust SDK（databento-rs），对 Rust 集成最友好",
+  "complexity": "低-中 - Databento 提供 Rust SDK 开箱即用；Polygon.io 提供标准 REST API；TickData 提供 ASCII 文本文件可直接解析",
+  "nt8_api_support": "不适用 - 完全绕过 NT8",
+  "limitations": "1. 需要付费订阅，成本可能较高（TickData 按品种/年计费，Databento 按使用量计费，Polygon.io $200-500/月）；2. 期货数据需额外支付交易所授权费（CME/ICE 等）；3. TickData 数据交付为离线文件，非实时 API；4. Polygon.io 期货数据覆盖较新，历史深度可能不如 TickData；5. 不同供应商的数据格式和字段定义不统一，切换成本较高；6. 数据延迟：TickData 为 T+1 更新，Databento 和 Polygon 支持近实时",
+
+  "multi_thread_support": "是 - API 调用天然支持并行；Databento Rust SDK 基于 async/await，支持高效并发",
+  "parallelism_model": "多品种并行 + 异步 I/O - 可同时请求多个品种的数据；Databento SDK 支持异步流式处理",
+  "latency": "不适用（历史数据）/ 低（Databento 实时数据 API 延迟在毫秒级）",
+  "throughput": "极高 - Databento Rust SDK 订单簿回放速度达 1900 万事件/秒；TickData 批量文件下载不受 API 限制",
+  "memory_footprint": "可控 - Databento SDK 支持流式处理；TickData 文件可逐行解析",
+  "backtest_speed_benchmark": "Databento 官方：Rust SDK 订单簿回放 19M events/sec；其他供应商数据解析速度取决于本地实现",
+
+  "data_granularity": "tick - 三家均支持逐笔 tick 数据，Databento 时间精度到纳秒级别",
+  "data_fidelity": "极高 - TickData：研究级清洗的 Level 1 tick 数据（trades + quotes），覆盖 150+ 全球期货品种，历史追溯到 1974 年；Databento：Level 1/Level 2/Level 3 数据，覆盖 70+ 全球交易所，纳秒时间戳；Polygon.io：Level 1 tick 数据，覆盖美国期货市场",
+
+  "integration_method": "Databento（推荐）：1. 注册账户获取 API Key；2. 使用 databento-rs (Rust SDK) 通过 cargo add databento 集成；3. 调用 Historical Client 下载历史 tick 数据；4. 数据以 DBN 格式（高效二进制）或 CSV 交付。TickData：1. 采购数据订阅；2. 下载 ASCII 文本文件；3. Rust 编写解析器处理文本数据。Polygon.io：1. 注册 API 账户；2. 使用 REST API（reqwest）获取数据；3. 解析 JSON 响应。",
+  "data_format": "Databento：DBN（Databento Binary Encoding，高效二进制格式）/ CSV / JSON；TickData：ASCII 文本文件（分隔符格式）；Polygon.io：REST API 返回 JSON",
+  "bidirectional": "否 - 纯数据获取，不支持交易执行（需另接券商 API）",
+  "serialization_overhead": "Databento DBN 格式：极低（专为高性能设计的二进制格式，零拷贝解析）；TickData ASCII：中等（文本解析开销）；Polygon JSON：低-中等",
+
+  "dev_effort": "Databento：2-3 人天（SDK 开箱即用）；Polygon.io：3-5 人天（REST 客户端 + JSON 解析）；TickData：2-3 人天（文本解析器）",
+  "maintenance": "低 - 商业 API 服务，供应商负责维护兼容性",
+  "ecosystem_maturity": "Databento：新兴但发展迅速，现代化 API 设计，Rust SDK 官方维护；TickData：行业标杆，35+ 年历史，数据质量最高；Polygon.io：成熟的金融数据 API 平台",
+  "community_activity": "Databento databento-rs GitHub：官方维护，活跃更新；Polygon.io：GitHub 上有多个社区客户端库；TickData：传统企业服务，社区活跃度较低",
+  "python_binding": "Databento 有官方 Python SDK；Polygon.io 有官方 Python 客户端；TickData 无特定语言绑定",
+  "live_trading_support": "Databento 支持实时数据流（可用于实盘信号），但不提供交易执行；其他两家仅提供数据服务",
+  "nt8_version_compatibility": "不适用 - 完全独立于 NT8",
+
+  "event_model": "Databento：异步流式处理（Rust async Stream）；Polygon.io：REST 请求-响应 / WebSocket 推送；TickData：批量文件处理",
+  "fault_tolerance": "高 - 商业级 API 服务有完善的错误处理、重试机制和数据质量保证；TickData 数据经过专业清洗和验证",
+
+  "uncertain": []
+}

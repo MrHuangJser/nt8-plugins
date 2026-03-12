@@ -1,0 +1,40 @@
+{
+  "name": "FFI (C ABI) + csbindgen",
+  "category": "communication",
+  "description": "Rust 编译为 C 动态库（.dll/.so/.dylib），NT8 的 C# 代码通过 P/Invoke（DllImport）调用 Rust 函数。csbindgen 是 Cysharp 开发的工具，可从 Rust 代码自动生成 C# P/Invoke 绑定代码，免去手动编写声明。适用于高性能、低延迟的进程内通信场景。",
+
+  "feasibility": "高——Rust FFI 和 C# P/Invoke 都是成熟技术，csbindgen 已在生产环境使用。NT8 作为 .NET 应用天然支持 P/Invoke。",
+  "complexity": "中——需要理解 FFI 边界的内存管理（谁分配谁释放）、数据类型映射、错误处理。csbindgen 降低了绑定代码编写难度，但 unsafe 代码仍需谨慎。",
+  "nt8_api_support": "NT8 NinjaScript 支持加载自定义 .NET DLL（通过 AddOn 引用），C# 可使用 P/Invoke 调用外部 native DLL。需将 Rust 编译的 DLL 放入 NT8 可访问的路径。",
+  "limitations": "1. NT8 NinjaScript 运行在沙盒环境中，直接从 Indicator/Strategy 调用 P/Invoke 可能受限，建议通过 AddOn 方式加载；2. FFI 边界只能传递 C 兼容类型（基本类型、指针、结构体），复杂对象需手动序列化；3. 跨 FFI 边界的 panic 会导致进程崩溃（需在 Rust 端 catch_unwind）；4. 调试困难——跨语言调试器支持有限；5. DLL 版本管理和部署需要注意路径问题；6. 32/64 位必须匹配（NT8 为 64 位）。",
+
+  "multi_thread_support": "支持——Rust 端可自由使用多线程（Rayon/Tokio），通过 FFI 返回结果到 C#。需注意线程安全（C# 回调需在正确线程上执行）。",
+  "parallelism_model": "Rust 端可采用任意并行模型：参数优化并行（Rayon）、多品种并行、SIMD 加速。通过 FFI 接口暴露异步/同步调用方式。",
+  "latency": "极低——进程内函数调用，FFI 调用开销仅约 5-20 纳秒（与普通函数调用相当），无进程间通信开销。",
+  "throughput": "极高——直接内存共享，无序列化开销。可通过指针传递大块数据（如 tick 数组），吞吐量接近内存带宽。",
+  "memory_footprint": "低——无额外通信层开销。Rust 和 C# 共享同一进程地址空间，可通过指针直接访问数据。需注意避免内存泄漏（FFI 边界的内存需明确释放策略）。",
+  "backtest_speed_benchmark": "[不确定] FFI 调用本身开销可忽略。回测速度取决于 Rust 引擎实现。参考：Rust 高性能回测引擎处理 tick 数据可达每秒千万级。",
+
+  "data_granularity": "支持任意粒度——FFI 传递的是原始数据，粒度由调用方决定。",
+  "data_fidelity": "最高——可传递任意自定义结构体，完整保留所有数据字段（bid/ask/last/volume/depth 等），无信息损失。",
+
+  "integration_method": "1. Rust 端：使用 #[no_mangle] extern \"C\" 导出函数，cargo build 编译为 cdylib（.dll）；2. 使用 csbindgen：在 build.rs 中调用 csbindgen::Builder 自动生成 C# 绑定代码；3. C# 端：将生成的绑定文件加入 NT8 AddOn 项目，将 Rust DLL 放入 NT8 bin 目录或系统 PATH；4. NT8 AddOn 中通过生成的静态方法调用 Rust 函数。",
+  "data_format": "C ABI 兼容的原始二进制数据——基本类型、C 结构体、指针+长度的缓冲区。复杂数据可使用 FlatBuffers 或自定义二进制格式。",
+  "bidirectional": "支持——C# 可调用 Rust 函数（P/Invoke），Rust 也可通过函数指针回调 C# 委托（callback），实现双向通信。",
+  "serialization_overhead": "接近零——直接传递内存中的 C 结构体，无需序列化/反序列化。对于复杂嵌套数据可能需要扁平化处理，但开销仍远低于任何文本或二进制序列化格式。",
+
+  "dev_effort": "基础 FFI 集成：3-5 人天；使用 csbindgen 自动生成绑定：2-3 人天；包含完善的错误处理和内存管理：1-2 人周。",
+  "maintenance": "中——Rust API 变更时需重新生成 C# 绑定（csbindgen 可自动化）。需确保 DLL ABI 稳定性。NT8 更新通常不影响 P/Invoke。",
+  "ecosystem_maturity": "中到高——Rust FFI 极其成熟，csbindgen 由 Cysharp（Unity 生态知名团队）维护，质量有保障。",
+  "community_activity": "csbindgen: GitHub 约 600+ stars，Cysharp 团队活跃维护，定期更新。Rust FFI 相关文档和教程丰富。",
+  "python_binding": "不直接提供——但 Rust 库可同时通过 PyO3 提供 Python 绑定，与 C# 绑定并行维护。",
+  "live_trading_support": "支持——FFI 是进程内调用，延迟极低，完全适合实盘场景。NT8 AddOn 在实盘模式下同样可以调用 Rust DLL。",
+  "nt8_version_compatibility": "高——P/Invoke 是 .NET 标准功能，不受 NT8 版本影响。需确保 DLL 为 64 位（匹配 NT8 64 位进程）。",
+
+  "event_model": "由 Rust 端实现决定——FFI 仅是通信通道。可支持同步调用（阻塞等待结果）或异步模式（Rust 端启动后台任务，通过回调通知 C#）。",
+  "fault_tolerance": "需要显式设计——Rust 端必须使用 catch_unwind 防止 panic 跨 FFI 传播；返回值应使用错误码模式；C# 端需检查返回值并处理异常。内存泄漏是主要风险点。",
+
+  "uncertain": [
+    "backtest_speed_benchmark"
+  ]
+}

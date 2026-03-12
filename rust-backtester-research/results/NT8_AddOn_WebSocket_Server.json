@@ -1,0 +1,40 @@
+{
+  "name": "NT8 AddOn WebSocket Server",
+  "category": "communication",
+  "description": "在 NT8 AddOn 中启动 WebSocket 服务器，外部程序（如 Rust 回测引擎、Python 分析工具、Web 前端）通过 WebSocket 协议连接并交互。WebSocket 提供全双工、低延迟的通信通道，基于 HTTP 升级协议，对防火墙友好。NT8 端可使用 .NET 内置的 HttpListener + WebSocket 或第三方库（如 WebSocketSharp、Fleck）。",
+
+  "feasibility": "高——WebSocket 是成熟的 Web 标准协议，.NET Framework 4.8 内置 System.Net.WebSockets 支持。NT8 AddOn 框架支持启动后台服务。",
+  "complexity": "中——WebSocket 服务器搭建相对简单，但需要在 NT8 AddOn 生命周期中正确管理服务器启停、处理多客户端连接、设计消息协议。",
+  "nt8_api_support": "间接支持——NT8 AddOn 框架允许创建自定义窗口和后台服务。可在 AddOn 的 OnWindowCreated 或自定义启动逻辑中初始化 WebSocket 服务器。NinjaScript 可通过 AddOn 暴露的接口访问市场数据和交易功能。",
+  "limitations": "1. NT8 NinjaScript 运行在 UI 线程，WebSocket 消息处理需要注意线程同步（需 Dispatcher.Invoke 回到 UI 线程访问 NT8 对象）；2. HttpListener 需要管理员权限注册 URL 前缀（或使用 netsh http add urlacl 预注册）；3. .NET Framework 4.8 的 WebSocket 支持需要 Windows 8+ 和 IIS 组件；4. 使用第三方库（WebSocketSharp/Fleck）可避免 HttpListener 限制但需额外引入 DLL；5. WebSocket 是文本/二进制帧协议，大批量数据传输效率不如原始 TCP；6. 安全性——默认无认证，需自行实现 Token 验证。",
+
+  "multi_thread_support": "支持——WebSocket 服务器天然支持多客户端并发连接，每个连接可在独立线程/任务中处理。需注意 NT8 对象的线程安全访问。",
+  "parallelism_model": "异步并发——每个 WebSocket 连接独立处理，基于 async/await 异步模型。可同时服务多个客户端（Rust 引擎、Python 分析工具、Web 前端等）。",
+  "latency": "低——WebSocket 本地连接延迟约 0.1-1 毫秒。比 HTTP 轮询显著更低，接近 TCP Socket（额外仅有 WebSocket 帧头开销，2-14 字节）。",
+  "throughput": "中到高——WebSocket 帧协议有少量开销（掩码、帧头），本地吞吐约 0.5-1.5 GB/s。对于 JSON 文本消息，吞吐受限于序列化速度。使用二进制帧可提升效率。",
+  "memory_footprint": "低——WebSocket 服务器本身内存占用很小（每连接约几 KB 缓冲区）。第三方库（Fleck/WebSocketSharp）内存开销也极小（< 5 MB）。",
+  "backtest_speed_benchmark": "[不确定] 通信层不是瓶颈。参考：通过 WebSocket 发送 JSON 格式 tick 数据约 5000-20000 msg/s；使用二进制 MessagePack 可达 50000+ msg/s。",
+
+  "data_granularity": "支持任意粒度——WebSocket 传输任意格式的消息帧。",
+  "data_fidelity": "取决于序列化格式——JSON 格式浮点精度由格式化决定（建议使用字符串表示高精度数值）；二进制格式可无损保留数据精度。",
+
+  "integration_method": "1. 创建 NT8 AddOn 项目，在 AddOn 类中启动 WebSocket 服务器；2. 推荐使用 Fleck 库（NuGet: Fleck，轻量级，无 HttpListener 依赖）或 WebSocketSharp；3. 定义消息协议：JSON 消息类型 + 消息体（如 {\"type\": \"tick_data\", \"payload\": {...}}）；4. NT8 端：通过 NinjaScript API 获取市场数据，通过 WebSocket 推送给客户端；5. Rust 端：使用 tokio-tungstenite 库作为 WebSocket 客户端连接 NT8 服务器；6. 编译 AddOn DLL 及依赖库放入 NT8 bin/Custom 目录。",
+  "data_format": "灵活——WebSocket 支持文本帧（适合 JSON）和二进制帧（适合 MessagePack/Protobuf/自定义格式）。推荐：控制消息用 JSON，批量数据用二进制帧。",
+  "bidirectional": "完全支持——WebSocket 是全双工协议，NT8 和外部程序可同时发送和接收消息。适合实时数据推送 + 指令接收场景。",
+  "serialization_overhead": "取决于消息格式。JSON：开销较大（文本格式，约 50-200 MB/s 序列化速度）。MessagePack：开销小（二进制，约 500 MB/s-1 GB/s）。对于交易信号等小消息，序列化开销可忽略。",
+
+  "dev_effort": "基础 WebSocket 服务器（使用 Fleck）：2-3 人天。完整方案（消息协议 + 多客户端管理 + 错误处理 + NT8 数据接口）：1-2 人周。",
+  "maintenance": "中——需要维护 AddOn 代码跟随 NT8 更新。WebSocket 协议本身极其稳定（RFC 6455）。第三方库更新频率低但稳定。",
+  "ecosystem_maturity": "高——WebSocket 是 W3C/IETF 标准协议，广泛应用于金融实时数据推送。Fleck/WebSocketSharp 是 .NET 生态成熟库。tokio-tungstenite 是 Rust 生态标准 WebSocket 客户端。",
+  "community_activity": "Fleck: GitHub 2.2k+ stars，维护稳定。WebSocketSharp: 5.5k+ stars（不再活跃维护，但功能稳定）。tokio-tungstenite: 1.9k+ stars，活跃维护。",
+  "python_binding": "天然支持——Python websockets 库可直接连接 NT8 WebSocket 服务器。也可在浏览器端直接使用 JavaScript WebSocket API。",
+  "live_trading_support": "非常适合——WebSocket 全双工低延迟特性非常适合实盘场景。可实时推送行情数据、接收交易指令、回传执行状态。许多交易所 API 也使用 WebSocket。",
+  "nt8_version_compatibility": "兼容——System.Net.WebSockets 是 .NET Framework 4.5+ 标准 API。使用第三方库（Fleck）则无 .NET 版本限制。NT8 AddOn 框架在所有 8.x 版本中保持一致。",
+
+  "event_model": "异步事件驱动——WebSocket 服务器基于连接事件（OnOpen/OnMessage/OnClose/OnError）回调模型。与 NT8 的事件驱动架构（OnBarUpdate 等）可自然对接。",
+  "fault_tolerance": "中等——WebSocket 协议支持 Ping/Pong 心跳帧检测连接活性。需自行实现客户端断线重连、消息队列缓存、异常处理。AddOn 生命周期管理需确保 NT8 关闭时优雅关闭服务器。",
+
+  "uncertain": [
+    "backtest_speed_benchmark"
+  ]
+}
